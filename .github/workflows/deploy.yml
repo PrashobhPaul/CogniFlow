@@ -1,0 +1,74 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      # Model weights are cached between deploys so the Hugging Face download
+      # only happens when the model list in scripts/vendor-model.mjs changes.
+      - name: Cache vendored models
+        uses: actions/cache@v4
+        with:
+          path: public/models
+          key: models-${{ hashFiles('scripts/vendor-model.mjs') }}
+
+      - name: Vendor open-weight models (chunked for GitHub Pages)
+        run: bun run vendor-model
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }} # optional; public models need no token
+
+      - name: Typecheck
+        run: bunx tsc --noEmit -p tsconfig.json
+
+      # Reads the Pages configuration: base_path is "/<repo>" for a project
+      # site and "" when a custom domain (CNAME) serves the site from "/".
+      - id: pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - name: Build
+        run: bun run build
+        env:
+          BASE_PATH: ${{ steps.pages.outputs.base_path }}/
+
+      # Keep the custom domain on Actions deployments (Pages reads CNAME from the artifact root).
+      - name: Carry CNAME into the artifact
+        run: test -f CNAME && cp CNAME dist/CNAME || true
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

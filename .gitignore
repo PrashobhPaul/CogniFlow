@@ -1,0 +1,31 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Copied at build time by scripts/copy-ort.mjs
+public/ort/
+
+# Model weights vendored by scripts/vendor-model.mjs are NOT ignored on purpose:
+# commit public/models/ if you want the weights in git; the Pages workflow
+# vendors them at build time otherwise.
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
