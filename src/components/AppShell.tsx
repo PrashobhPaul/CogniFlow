@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
-import { Waypoints } from "lucide-react";
 import type { ReactNode } from "react";
+import { BrandLogo } from "@/components/Brand";
 
 const NAV = [
   { to: "/", label: "New" },
@@ -25,11 +25,8 @@ export function AppShell({
     <div className="min-h-screen bg-background text-foreground">
       <header className="sticky top-0 z-20 border-b border-border/60 bg-background/85 backdrop-blur">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-5 py-3">
-          <Link to="/" className="flex items-center gap-2.5">
-            <span className="grid h-8 w-8 place-items-center rounded-lg bg-primary/15 text-primary">
-              <Waypoints className="h-4 w-4" />
-            </span>
-            <span className="text-sm font-semibold tracking-tight">ArchAnimate</span>
+          <Link to="/" className="flex items-center">
+            <BrandLogo />
           </Link>
           <nav className="flex flex-wrap items-center gap-1 text-xs">
             {NAV.map((item) => (

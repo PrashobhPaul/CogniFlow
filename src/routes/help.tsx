@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
+import { pageTitle } from "@/lib/brand";
 import { Card } from "@/components/ui/card";
 
 export const Route = createFileRoute("/help")({
   head: () => ({
     meta: [
-      { title: "Help & Concepts — ArchAnimate" },
+      { title: pageTitle("Help & Concepts") },
       {
         name: "description",
         content:

@@ -1,6 +1,10 @@
-# ArchAnimate
+<p align="center">
+  <img src="public/brand/cogniflow-logo.png" alt="CogniFlow — Animated Architecture for AI" width="640" />
+</p>
 
-**Free, open-source, browser-only studio for animated software architecture diagrams.**
+# CogniFlow
+
+**Animated Architecture for AI.** Free, open-source, browser-only studio for animated software architecture diagrams.
 Design components on an infinite canvas, watch real data flow move between them, and export
 animated GIFs, videos and slide decks — with an open-weight model that ships with the site.
 
@@ -23,6 +27,12 @@ the AI model — runs in your browser. Hosted on GitHub Pages straight from this
 | PNG · JPEG · SVG · AIR JSON    | One scene model that mirrors the canvas, so files match the page                    |
 | Intent prompts                 | "agents for a full AIDLC lifecycle" → the closest reference pattern                 |
 | 3D icon set                    | 120+ volumetric medallions, brand marks included, drawn once for canvas and exports |
+
+### Brand assets
+
+The logo lives in `public/brand/`: `cogniflow-mark.svg` is the source of truth, and `bun run brand`
+(`scripts/build-brand.mjs`) regenerates the favicons, Apple touch icon, light/dark lockups and the
+social card from it. Edit the mark, run the script, commit the outputs.
 
 ### Icons
 
@@ -108,6 +118,7 @@ src/lib/studio/
   ai/endpoint.ts prompts.ts          OpenAI-compatible client, shared prompts
 scripts/vendor-model.mjs             download + chunk models into public/models
 scripts/copy-ort.mjs                 copy onnxruntime-web WASM into public/ort
+scripts/build-brand.mjs              favicons, lockups and social card from public/brand
 .github/workflows/deploy.yml         build + Pages deploy
 ```
 

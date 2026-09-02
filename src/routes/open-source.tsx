@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Check, Github, ShieldCheck } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { BRAND, pageTitle } from "@/lib/brand";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Icon3D } from "@/components/studio/Icon3D";
@@ -12,11 +13,10 @@ const CATEGORIES = Object.keys(CATEGORY_LABEL) as NodeCategory[];
 export const Route = createFileRoute("/open-source")({
   head: () => ({
     meta: [
-      { title: "Open source & free — ArchAnimate" },
+      { title: pageTitle("Open source & free") },
       {
         name: "description",
-        content:
-          "ArchAnimate is MIT-licensed, hosted on GitHub Pages, and runs entirely in the browser with open-weight models. No accounts, no plans, no telemetry.",
+        content: `${BRAND.name} is MIT-licensed, hosted on GitHub Pages, and runs entirely in the browser with open-weight models. No accounts, no plans, no telemetry.`,
       },
     ],
   }),
@@ -60,7 +60,7 @@ function OpenSource() {
   return (
     <AppShell
       title="Open source & free for everyone"
-      subtitle="ArchAnimate is MIT-licensed. Fork it, self-host it on any static host, swap the model, or run it against your own inference endpoint. There is no paid tier — every feature below is on for every visitor."
+      subtitle={`${BRAND.name} is MIT-licensed. Fork it, self-host it on any static host, swap the model, or run it against your own inference endpoint. There is no paid tier — every feature below is on for every visitor.`}
     >
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="flex flex-col gap-3 p-5">
@@ -77,12 +77,12 @@ function OpenSource() {
             ))}
           </ul>
           <a
-            href="https://github.com/PrashobhPaul/ArchAnimate"
+            href={BRAND.repoUrl}
             target="_blank"
             rel="noreferrer"
             className="mt-2 inline-flex w-fit items-center gap-2 rounded-md border border-border/60 px-3 py-1.5 text-xs hover:bg-card"
           >
-            <Github className="h-3.5 w-3.5" /> github.com/PrashobhPaul/ArchAnimate
+            <Github className="h-3.5 w-3.5" /> {BRAND.repoLabel}
           </a>
         </Card>
 

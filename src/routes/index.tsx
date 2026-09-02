@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
+import { pageTitle } from "@/lib/brand";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -29,7 +30,7 @@ import type { AirGraph } from "@/lib/studio/air";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Create New Architecture — ArchAnimate" },
+      { title: pageTitle("Create New Architecture") },
       {
         name: "description",
         content:

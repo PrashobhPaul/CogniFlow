@@ -83,7 +83,7 @@ const DEFAULT_EXPORT_PREFS: ExportPrefs = {
   steps: true,
   grid: true,
   watermark: true,
-  watermarkText: "aiarchitectstudio.prashobhpaul.com",
+  watermarkText: "CogniFlow",
 };
 
 const loadExportPrefs = (): ExportPrefs => {

@@ -1,7 +1,7 @@
 {
-  "name": "archanimate",
+  "name": "cogniflow",
   "version": "1.0.0",
-  "description": "Open-source, browser-only studio for animated software architecture diagrams — GIF, video and slide exports with an open-weight model that ships with the site.",
+  "description": "CogniFlow — Animated Architecture for AI. Open-source, browser-only studio for animated software architecture diagrams — GIF, video and slide exports with an open-weight model that ships with the site.",
   "license": "MIT",
   "private": true,
   "type": "module",
@@ -15,6 +15,7 @@
     "build": "node scripts/copy-ort.mjs && vite build && node -e \"require('fs').copyFileSync('dist/index.html','dist/404.html')\"",
     "preview": "vite preview",
     "vendor-model": "node scripts/vendor-model.mjs",
+    "brand": "node scripts/build-brand.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint": "eslint .",
     "format": "prettier --write ."
@@ -93,6 +94,7 @@
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^15.15.0",
     "prettier": "^3.7.3",
+    "sharp": "^0.34.5",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.56.1",
     "vite": "8.1.5"

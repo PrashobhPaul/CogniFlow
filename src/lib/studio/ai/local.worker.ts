@@ -46,6 +46,7 @@ type InMsg = LoadMsg | GenerateMsg | ProbeMsg | ConfigureMsg | { type: "unload" 
 const BASE = (import.meta.env.BASE_URL || "/").replace(/\/?$/, "/");
 const ORIGIN = self.location.origin;
 const LOCAL_ROOT = `${ORIGIN}${BASE}models/`;
+// Historical name kept stable across the CogniFlow rename so cached weights survive.
 const CACHE_NAME = "archanimate-models-v1";
 
 // ── Transformers.js environment ──────────────────────────────────────────────
