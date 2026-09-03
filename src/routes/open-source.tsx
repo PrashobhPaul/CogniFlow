@@ -1,22 +1,63 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Check, Github, ShieldCheck } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { BRAND, pageTitle } from "@/lib/brand";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Icon3D } from "@/components/studio/Icon3D";
+import { NodeOverlay } from "@/components/studio/NodeOverlay";
 import { PALETTE } from "@/lib/studio/palette";
+import { shapeFor } from "@/lib/studio/render/icons3d";
+import {
+  NODE_MOTIONS,
+  NODE_MOTION_LABEL,
+  STATUS_LABEL,
+  motionForShape,
+  type NodeMotion,
+  type ResolvedStatus,
+} from "@/lib/studio/render/motion";
 import { CATEGORY_LABEL, type NodeCategory } from "@/lib/studio/types";
 
 const CATEGORIES = Object.keys(CATEGORY_LABEL) as NodeCategory[];
 
+/** One representative component per motion kind, for the legend. */
+const MOTION_SAMPLES = NODE_MOTIONS.filter((m) => m !== "none").map((motion) => ({
+  motion,
+  item: PALETTE.find((p) => motionForShape(shapeFor(p.type, p.category)) === motion) ?? PALETTE[0]!,
+}));
+
+const STATUS_SAMPLES: ResolvedStatus[] = ["idle", "executing", "success", "retry", "error"];
+
+function MotionSample({ motion, item }: { motion: NodeMotion; item: (typeof PALETTE)[number] }) {
+  return (
+    <div className="flex items-center gap-3 rounded-md border border-border/50 bg-card/60 p-2.5">
+      <span className="relative h-9 w-9 shrink-0">
+        <Icon3D icon={item.icon} category={item.category} type={item.type} size={36} />
+        <NodeOverlay
+          motion={motion}
+          status="executing"
+          category={item.category}
+          size={36}
+          badge={false}
+        />
+      </span>
+      <span className="min-w-0">
+        <span className="block text-[11px] font-medium">{NODE_MOTION_LABEL[motion].label}</span>
+        <span className="block text-[10px] leading-snug text-muted-foreground">
+          {NODE_MOTION_LABEL[motion].hint}
+        </span>
+      </span>
+    </div>
+  );
+}
+
 export const Route = createFileRoute("/open-source")({
   head: () => ({
     meta: [
-      { title: "Open source & free — ArchAnimate" },
+      { title: pageTitle("Open source & free") },
       {
         name: "description",
-        content:
-          "ArchAnimate is MIT-licensed, hosted on GitHub Pages, and runs entirely in the browser with open-weight models. No accounts, no plans, no telemetry.",
+        content: `${BRAND.name} is MIT-licensed, hosted on GitHub Pages, and runs entirely in the browser with open-weight models. No accounts, no plans, no telemetry.`,
       },
     ],
   }),
@@ -60,7 +101,7 @@ function OpenSource() {
   return (
     <AppShell
       title="Open source & free for everyone"
-      subtitle="ArchAnimate is MIT-licensed. Fork it, self-host it on any static host, swap the model, or run it against your own inference endpoint. There is no paid tier — every feature below is on for every visitor."
+      subtitle={`${BRAND.name} is MIT-licensed. Fork it, self-host it on any static host, swap the model, or run it against your own inference endpoint. There is no paid tier — every feature below is on for every visitor.`}
     >
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="flex flex-col gap-3 p-5">
@@ -77,12 +118,12 @@ function OpenSource() {
             ))}
           </ul>
           <a
-            href="https://github.com/PrashobhPaul/ArchAnimate"
+            href={BRAND.repoUrl}
             target="_blank"
             rel="noreferrer"
             className="mt-2 inline-flex w-fit items-center gap-2 rounded-md border border-border/60 px-3 py-1.5 text-xs hover:bg-card"
           >
-            <Github className="h-3.5 w-3.5" /> github.com/PrashobhPaul/ArchAnimate
+            <Github className="h-3.5 w-3.5" /> {BRAND.repoLabel}
           </a>
         </Card>
 
@@ -110,15 +151,45 @@ function OpenSource() {
           </p>
         </Card>
 
-        <Card className="p-5 lg:col-span-2" data-testid="icon-gallery">
-          <p className="text-sm font-medium">3D icon set · {PALETTE.length} components</p>
+        <Card className="p-5 lg:col-span-2" data-testid="motion-legend">
+          <p className="text-sm font-medium">Component motion & status badges</p>
           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-            Every component is a volumetric medallion lit from the top-left: crystals for foundation
-            models, neural cubes for agents, gear hubs for orchestration, lattice cylinders for
-            vector and data systems, portals for gateways and protocols, shields for safety, glass
-            tiles for interfaces. The same SVG draws the canvas, the palette and every export. Brand
-            marks come from the CC0 simple-icons set; logos remain trademarks of their owners and
-            denote the product only.
+            Each silhouette carries its own processing animation, played only while the component
+            has an active flow, and a micro-badge for its state. The canvas, the animated SVG and
+            every GIF / video frame are drawn from the same keyframes.
+          </p>
+          <div className="mt-3 grid grid-cols-[repeat(auto-fill,minmax(230px,1fr))] gap-2">
+            {MOTION_SAMPLES.map((s) => (
+              <MotionSample key={s.motion} motion={s.motion} item={s.item} />
+            ))}
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {STATUS_SAMPLES.map((status) => (
+              <div
+                key={status}
+                className="flex items-center gap-2 rounded-md border border-border/50 bg-card/60 px-2.5 py-1.5"
+              >
+                <span className="relative h-7 w-7 shrink-0">
+                  <Icon3D icon="Bot" category="ai" type="agent" size={28} />
+                  <NodeOverlay motion="none" status={status} category="ai" size={28} />
+                </span>
+                <span className="text-[11px]">{STATUS_LABEL[status]}</span>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        <Card className="p-5 lg:col-span-2" data-testid="icon-gallery">
+          <p className="text-sm font-medium">Symbol library · {PALETTE.length} components</p>
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+            Every component is a volumetric silhouette lit from the top-left: neural crystals for
+            hosted models and lattices for open weights, a funnel for embedding, point clouds for
+            vector stores, stacked cylinders for relational data, a dispatch hub for orchestrators,
+            a state ring for agent frameworks, conveyor belts for queues, fan-out for pub/sub,
+            portals for gateways, checkpoint gates for guardrails, radar dishes for telemetry and a
+            heartbeat monitor for alerts. The same SVG draws the canvas, the palette and every
+            export. Brand marks come from the CC0 simple-icons set; logos remain trademarks of their
+            owners and denote the product only.
           </p>
           {CATEGORIES.map((cat) => {
             const items = PALETTE.filter((item) => item.category === cat);

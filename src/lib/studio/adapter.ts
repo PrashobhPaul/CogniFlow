@@ -13,6 +13,8 @@ export function toAir(nodes: ArchNode[], edges: FlowEdge[]): AirGraph {
     icon: n.data.icon,
     position: { x: Math.round(n.position.x), y: Math.round(n.position.y) },
     group_id: null,
+    // "auto" is the default, so only a declared state is written to the graph.
+    ...(n.data.status && n.data.status !== "auto" ? { status: n.data.status } : {}),
   }));
 
   const airEdges: AirEdge[] = edges.map((e) => {
@@ -60,6 +62,7 @@ export function fromAir(graph: AirGraph): { nodes: ArchNode[]; edges: FlowEdge[]
       category: n.category as NodeCategory,
       icon: n.icon,
       componentType: n.component_type,
+      status: n.status ?? "auto",
     },
   }));
 

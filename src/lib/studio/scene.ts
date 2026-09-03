@@ -5,6 +5,14 @@ import { EXPORT_THEMES, FONT_MONO, FONT_SANS, type ExportTheme, type ExportTheme
 import { buildStory, type StoryStep } from "./story";
 import { samplePath, type PathSampler } from "./render/path";
 import { shapeFor, type IconShape } from "./render/icons3d";
+import {
+  NODE_MOTION_PERIOD,
+  motionForShape,
+  resolveStatus,
+  statusColor,
+  type NodeMotion,
+  type ResolvedStatus,
+} from "./render/motion";
 import type { NodeCategory, SemanticType } from "./types";
 import { CATEGORY_LABEL } from "./types";
 
@@ -75,6 +83,13 @@ export interface SceneNode {
   accent: string;
   /** 3D medallion base, derived from the component type (see render/icons3d). */
   shape: IconShape;
+  /** Component motion grammar, derived from the shape (see render/motion). */
+  motion: NodeMotion;
+  /** Seconds per motion cycle after speed scaling (loop-locked at render time). */
+  period: number;
+  /** Resolved status badge (declared, or derived from the connectors). */
+  status: ResolvedStatus;
+  statusColor: string;
 }
 
 export interface SceneEdge {
@@ -275,25 +290,40 @@ export function buildScene(graph: AirGraph, opts: SceneOptions = {}): Scene {
   const offY = titleBandH + pad - minY;
 
   // 4. Shift into scene space.
-  const nodes: SceneNode[] = rawNodes.map((r) => ({
-    id: r.n.id,
-    x: r.x + offX,
-    y: r.y + offY,
-    w: r.w,
-    h: r.h,
-    label: r.n.label,
-    subtitle: r.n.subtitle,
-    icon: r.n.icon,
-    category: (r.n.category in CATEGORY_LABEL ? r.n.category : "application") as NodeCategory,
-    accent:
-      theme.category[
-        (r.n.category in CATEGORY_LABEL ? r.n.category : "application") as NodeCategory
-      ],
-    shape: shapeFor(
-      r.n.component_type,
-      (r.n.category in CATEGORY_LABEL ? r.n.category : "application") as NodeCategory,
-    ),
-  }));
+  const nodes: SceneNode[] = rawNodes.map((r) => {
+    const category = (
+      r.n.category in CATEGORY_LABEL ? r.n.category : "application"
+    ) as NodeCategory;
+    const accent = theme.category[category];
+    const shape = shapeFor(r.n.component_type, category);
+    const motion = motionForShape(shape);
+    const status = resolveStatus(
+      r.n.status,
+      graph.edges
+        .filter((e) => e.source_node_id === r.n.id || e.target_node_id === r.n.id)
+        .map((e) => ({
+          semantic: e.semantic_type,
+          enabled: motionById.get(e.id)?.enabled ?? true,
+        })),
+    );
+    return {
+      id: r.n.id,
+      x: r.x + offX,
+      y: r.y + offY,
+      w: r.w,
+      h: r.h,
+      label: r.n.label,
+      subtitle: r.n.subtitle,
+      icon: r.n.icon,
+      category,
+      accent,
+      shape,
+      motion,
+      period: NODE_MOTION_PERIOD[motion] / speedScale,
+      status,
+      statusColor: statusColor(status, theme, accent),
+    };
+  });
 
   let maxDur = 0;
   const edges: SceneEdge[] = rawEdges.map((r) => {

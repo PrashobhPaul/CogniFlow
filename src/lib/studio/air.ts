@@ -28,6 +28,7 @@ export const semanticTypeSchema = z.enum([
 export const directionSchema = z.enum(["forward", "reverse", "bidirectional"]);
 export const executionModeSchema = z.enum(["synchronous", "asynchronous", "streaming", "batch"]);
 export const grammarSchema = z.enum(["packet", "stream", "dense", "pulse", "batch"]);
+export const nodeStatusSchema = z.enum(["auto", "idle", "executing", "success", "retry", "error"]);
 
 export const airNodeSchema = z.object({
   id: z.string().min(1),
@@ -38,6 +39,8 @@ export const airNodeSchema = z.object({
   icon: z.string().min(1),
   position: z.object({ x: z.number(), y: z.number() }),
   group_id: z.string().nullable().optional(),
+  /** Declared runtime state; omitted means "auto" (derived from connectors). */
+  status: nodeStatusSchema.optional(),
   metadata: z.record(z.unknown()).optional(),
 });
 

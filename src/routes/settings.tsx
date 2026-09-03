@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Activity, Download, Loader2, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { pageTitle } from "@/lib/brand";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -32,7 +33,7 @@ import {
 export const Route = createFileRoute("/settings")({
   head: () => ({
     meta: [
-      { title: "Settings — ArchAnimate" },
+      { title: pageTitle("Settings") },
       {
         name: "description",
         content:

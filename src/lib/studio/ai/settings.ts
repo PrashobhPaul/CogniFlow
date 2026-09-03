@@ -144,6 +144,7 @@ export const DEFAULT_AI_SETTINGS: AiSettings = {
   },
 };
 
+// Historical key kept stable across the CogniFlow rename so saved settings survive.
 const KEY = "archanimate.ai.v1";
 const listeners = new Set<() => void>();
 let cached: AiSettings | null = null;

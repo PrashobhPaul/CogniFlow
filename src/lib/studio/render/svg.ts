@@ -1,6 +1,7 @@
 import { CHIP, NODE, lockedDuration, type Scene, type SceneEdge, type SceneNode } from "../scene";
 import { FONT_MONO, FONT_SANS, hexWithAlpha } from "../theme";
 import { icon3dMarkup } from "./icons3d";
+import { nodeOverlayMarkup } from "./motion";
 
 /**
  * Scene → SVG. Static or SMIL-animated, optionally focused on one connector
@@ -19,6 +20,11 @@ export interface SvgOptions {
   particles?: boolean;
   /** Draw only background layers (used by frame painters for layering). */
   layer?: "all" | "background" | "foreground";
+  /**
+   * Draw component motion overlays and the executing spinner. Frame painters
+   * turn this off for their static layer and paint those parts per frame.
+   */
+  nodeMotion?: boolean;
 }
 
 export const esc = (v: string) =>
@@ -124,7 +130,11 @@ export function sceneToSvg(scene: Scene, opts: SvgOptions): string {
   }
 
   const nodeLayer = scene.nodes.map((n) =>
-    renderNode(scene, n, focus ? (focusNodes.has(n.id) ? 1 : 0.45) : 1),
+    renderNode(scene, n, focus ? (focusNodes.has(n.id) ? 1 : 0.45) : 1, {
+      animated: opts.animated && !focus,
+      loopSeconds: opts.loopSeconds,
+      motionLayer: opts.nodeMotion ?? true,
+    }),
   );
 
   const layer = opts.layer ?? "all";
@@ -142,7 +152,12 @@ export function sceneToSvg(scene: Scene, opts: SvgOptions): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${scene.width}" height="${scene.height}" viewBox="0 0 ${scene.width} ${scene.height}" font-family="${FONT_SANS}"><defs>${defs.join("")}</defs>${body}</svg>`;
 }
 
-function renderNode(scene: Scene, n: SceneNode, opacity: number): string {
+function renderNode(
+  scene: Scene,
+  n: SceneNode,
+  opacity: number,
+  motion: { animated: boolean; loopSeconds: number | undefined; motionLayer: boolean },
+): string {
   const t = scene.theme;
   const x = r2(n.x);
   const y = r2(n.y);
@@ -165,12 +180,26 @@ function renderNode(scene: Scene, n: SceneNode, opacity: number): string {
     x: r2(iconX),
     y: r2(iconTop),
   });
+  const overlay = nodeOverlayMarkup({
+    motion: n.motion,
+    status: n.status,
+    accent: n.accent,
+    statusColor: n.statusColor,
+    bg: t.card,
+    size: NODE.iconBox,
+    x: r2(iconX),
+    y: r2(iconTop),
+    period: motion.loopSeconds ? lockedDuration(n.period, 1, motion.loopSeconds) : n.period,
+    animated: motion.animated,
+    motionLayer: motion.motionLayer,
+  });
   const cardFill = t.id === "studio" ? hexWithAlpha(t.card, 0.95) : t.card;
   return [
     `<g opacity="${opacity}">`,
     `<rect x="${x}" y="${y}" width="${n.w}" height="${n.h}" rx="${NODE.radius}" fill="${cardFill}" stroke="${hexWithAlpha(t.cardBorder, 0.7)}" stroke-width="1" filter="url(#node-shadow)" />`,
     `<rect x="${x}" y="${y}" width="${NODE.borderL}" height="${n.h}" fill="${n.accent}" clip-path="url(#clip-${esc(n.id)})" />`,
     icon,
+    overlay,
     `<text x="${r2(textX)}" y="${r2(labelBaseline)}" fill="${t.foreground}" font-size="${NODE.labelSize}" font-weight="600" letter-spacing="-0.2">${esc(n.label)}</text>`,
     n.subtitle
       ? `<text x="${r2(textX)}" y="${r2(subBaseline)}" fill="${t.muted}" font-size="${NODE.subSize}" font-family="${FONT_MONO}" letter-spacing="${NODE.subTracking}">${esc(n.subtitle.toUpperCase())}</text>`

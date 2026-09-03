@@ -68,7 +68,7 @@ export async function buildPptx(opts: PptxOptions): Promise<Blob> {
   const pptx = new PptxGenJS();
   pptx.layout = "LAYOUT_WIDE";
   pptx.title = projectName;
-  pptx.author = "AI Architecture Motion Studio";
+  pptx.author = "CogniFlow";
   pptx.subject = "Architecture storyboard";
 
   // ── Slide 1: animated overview ────────────────────────────────────────────

@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
+import { pageTitle } from "@/lib/brand";
 import { Card } from "@/components/ui/card";
 
 export const Route = createFileRoute("/help")({
   head: () => ({
     meta: [
-      { title: "Help & Concepts — ArchAnimate" },
+      { title: pageTitle("Help & Concepts") },
       {
         name: "description",
         content:
@@ -27,11 +28,19 @@ const SECTIONS = [
   },
   {
     title: "Semantic connectors",
-    body: "Each connector carries direction, semantic type (request, response, data, event, stream, retrieval, embedding, message, file, control, error, retry), protocol, execution mode, payload type, label and metadata.",
+    body: "Each connector carries direction, semantic type (request, response, data, event, stream, retrieval, embedding, message, file, control, error, retry), protocol, execution mode, payload type, label and metadata. Colour encodes the type: blue for raw data and files, purple for embeddings, teal for retrieval, green for responses, cyan for requests, amber for events, magenta for streams, red for errors and orange for retries.",
   },
   {
     title: "Motion grammars",
     body: "packet (discrete calls), stream (continuous), dense (token streaming), pulse (events) and batch (bulk transfers). Grammar sets speed, density and particle size, all editable per connector.",
+  },
+  {
+    title: "Symbol library",
+    body: "Every component is a functional silhouette, not a generic box: neural crystals for hosted models and lattices for open weights, a funnel for embedding, point clouds for vector stores and stacked cylinders for relational data, a dispatch hub for orchestrators and a state ring for agent frameworks, conveyor belts for queues, fan-out for pub/sub, portals for gateways, checkpoint gates for guardrails, radar dishes for telemetry and a heartbeat monitor for alerts. Brand marks sit on the same bases, so Pinecone and a generic vector DB read as the same kind of thing.",
+  },
+  {
+    title: "Component motion & status badges",
+    body: "Each silhouette carries its own processing animation: a pulsing perimeter for models, a thinking ring for agents and hubs, a radar sweep for vector stores and observability, a scanning laser for gateways, gates and chunkers, ripples for fan-out, a marching belt for queues and sequential lights for neural lattices. Motion plays only while the component has an active flow. The micro-badge on every icon is idle (grey dot), executing (spinning ring), success (green check), fallback / retry (amber) or error (red) — derived from the connectors by default, or declared per component in the inspector. Canvas, animated SVG and every GIF / video frame draw it from the same keyframes.",
   },
   {
     title: "Two compilers, both open",

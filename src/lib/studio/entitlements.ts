@@ -1,5 +1,5 @@
 /**
- * ArchAnimate is fully open source: there is no paid tier and nothing is
+ * CogniFlow is fully open source: there is no paid tier and nothing is
  * gated. This module keeps the same shape the studio components consume so
  * every export and AI feature is simply "on", with generous browser-safe
  * limits. The AI status reflects which engine the user picked in Settings

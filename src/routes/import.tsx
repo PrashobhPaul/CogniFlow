@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { AlertTriangle, FileCode2, ImageUp, Loader2, Settings2, Upload } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { pageTitle } from "@/lib/brand";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -19,7 +20,7 @@ import { useEntitlements } from "@/lib/studio/use-entitlements";
 export const Route = createFileRoute("/import")({
   head: () => ({
     meta: [
-      { title: "Import & Reconstruction Review — ArchAnimate" },
+      { title: pageTitle("Import & Reconstruction Review") },
       {
         name: "description",
         content:

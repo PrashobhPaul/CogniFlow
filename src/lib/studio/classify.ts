@@ -48,6 +48,9 @@ const RULES: [RegExp, ComponentGuess][] = [
   [/\b(copilot)\b/, g("copilot")],
   [/\b(langsmith)\b/, g("langsmith")],
   [/\b(arize|phoenix)\b/, g("arize")],
+  [/\b(langfuse)\b/, g("langfuse")],
+  [/\b(cloudwatch)\b/, g("cloudwatch")],
+  [/\b(datadog)\b/, g("datadog")],
   [/\b(opentelemetry|otel|tracing|traces|trace collector|telemetry)\b/, g("tracing")],
   [/\b(pinecone)\b/, g("pinecone")],
   [/\b(chroma|chromadb)\b/, g("chroma")],
@@ -65,6 +68,9 @@ const RULES: [RegExp, ComponentGuess][] = [
   [/\b(websocket|websockets|socket\.io|realtime channel)\b/, g("websocket")],
   [/\b(llm gateway|model gateway|litellm|portkey)\b/, g("llmgateway")],
   [/\b(ai gateway)\b/, g("aigateway")],
+  [/\b(rabbit ?mq)\b/, g("rabbitmq")],
+  [/\b(sqs|amazon sqs)\b/, g("sqs")],
+  [/\b(google pub\/?sub|cloud pub\/?sub|gcp pub\/?sub)\b/, g("gcppubsub")],
   [/\b(pub\/?sub|event bus|eventbridge|sns|message bus|event grid)\b/, g("pubsub")],
   [/\b(load balancer|alb|nlb|elb|ingress)\b/, g("loadbalancer")],
   [
@@ -166,6 +172,11 @@ const RULES: [RegExp, ComponentGuess][] = [
   [/\b(mongo|mongodb|dynamo|dynamodb|cosmos|documentdb|firestore|couch)\w*/, g("nosql")],
   [/\b(sap|salesforce|qms|erp|crm|servicenow|workday|system of record)\b/, g("enterprise")],
   [/\b(db|database|sql|postgres|postgresql|mysql|aurora|rds|sqlite)\w*/, g("sql")],
+  [
+    /\b(audio|voice|speech|microphone|mic|podcasts?|call recordings?|stt|tts|transcripts?)\b/,
+    g("audio"),
+  ],
+  [/\b(videos?|screen recordings?|camera|media files|footage|frames)\b/, g("video")],
   [
     /\b(document|documents|docs|pdf|pdfs|files|corpus|sop|sops|policies|manuals|specs?)\b/,
     g("documents"),
@@ -287,7 +298,14 @@ export function defaultProtocol(semantic: SemanticType, targetType: string): str
     case "kafka":
       return "Kafka";
     case "queue":
+    case "rabbitmq":
       return "AMQP";
+    case "sqs":
+    case "gcppubsub":
+      return "REST";
+    case "audio":
+    case "video":
+      return "S3";
     case "mcp":
     case "tools":
       return "MCP";

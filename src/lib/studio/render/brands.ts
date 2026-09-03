@@ -8,6 +8,7 @@ import {
   siCrewai,
   siCypress,
   siDatabricks,
+  siDatadog,
   siDeepseek,
   siDocker,
   siDotnet,
@@ -16,6 +17,7 @@ import {
   siFirebase,
   siGithub,
   siGooglecloud,
+  siGooglepubsub,
   siGooglegemini,
   siGrafana,
   siGraphql,
@@ -42,6 +44,7 @@ import {
   siPrometheus,
   siPython,
   siQdrant,
+  siRabbitmq,
   siRedis,
   siSelenium,
   siSnowflake,
@@ -137,6 +140,11 @@ export const BRANDS: Record<string, Brand> = {
   firebase: si("firebase", siFirebase),
   kafka: si("kafka", siApachekafka, "Kafka"),
 
+  // Queues & messaging
+  rabbitmq: si("rabbitmq", siRabbitmq),
+  sqs: mono("sqs", "Amazon SQS", "#FF4F8B", "SQS"),
+  gcppubsub: si("gcppubsub", siGooglepubsub, "Google Pub/Sub"),
+
   // Gateways, connectivity & protocols
   mcp: si("mcp", siModelcontextprotocol, "MCP"),
   a2a: mono("a2a", "Agent-to-Agent", "#4285F4", "A2A"),
@@ -149,6 +157,9 @@ export const BRANDS: Record<string, Brand> = {
   // Safety, observability & tooling
   langsmith: mono("langsmith", "LangSmith", "#1C3C3C", "Ls"),
   arize: mono("arize", "Arize", "#4B3AFF", "Ar"),
+  langfuse: mono("langfuse", "Langfuse", "#0A60B5", "Lf"),
+  cloudwatch: mono("cloudwatch", "Amazon CloudWatch", "#E7157B", "CW"),
+  datadog: si("datadog", siDatadog),
   otel: si("otel", siOpentelemetry, "OpenTelemetry"),
   grafana: si("grafana", siGrafana),
   prometheus: si("prometheus", siPrometheus),

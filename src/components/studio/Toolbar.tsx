@@ -11,8 +11,8 @@ import {
   Save,
   Tags,
   Undo2,
-  Waypoints,
 } from "lucide-react";
+import { BrandMark } from "@/components/Brand";
 import { useMemo } from "react";
 import { toast } from "sonner";
 import { useStudio } from "@/lib/studio/store";
@@ -53,11 +53,8 @@ export function Toolbar() {
   return (
     <header className="studio-topbar">
       <div className="flex min-w-0 items-center gap-3">
-        <Link
-          to="/"
-          className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-primary/15 text-primary"
-        >
-          <Waypoints className="h-4 w-4" />
+        <Link to="/" className="shrink-0" title="CogniFlow — home">
+          <BrandMark className="h-8 w-8" />
         </Link>
         <div className="min-w-0">
           <Input

@@ -69,6 +69,9 @@ const EXTENDED: PaletteItem[] = [
   p("postgres", "PostgreSQL", "pgvector", "data", "brand:postgres"),
   p("neo4j", "Neo4j", "Graph database", "data", "brand:neo4j"),
   p("s3", "Amazon S3", "Object store", "data", "brand:s3"),
+  // Data inputs
+  p("audio", "Audio Input", "Voice · calls · podcasts", "data", "Mic"),
+  p("video", "Video / Media", "Recordings · captures", "data", "Film"),
   // Gateways, connectivity & protocols
   p("a2a", "A2A Protocol", "Agent-to-agent", "integration", "brand:a2a"),
   p("grpc", "gRPC", "Binary RPC", "integration", "brand:grpc"),
@@ -76,6 +79,9 @@ const EXTENDED: PaletteItem[] = [
   p("llmgateway", "LLM Gateway", "Keys · routing · cost", "integration", "DoorOpen"),
   p("aigateway", "AI Gateway", "Policies · guardrails", "integration", "Aperture"),
   p("pubsub", "Pub/Sub · Event Bus", "Fan-out events", "integration", "RadioTower"),
+  p("rabbitmq", "RabbitMQ", "AMQP broker", "integration", "brand:rabbitmq"),
+  p("sqs", "Amazon SQS", "Managed queue", "integration", "brand:sqs"),
+  p("gcppubsub", "Google Pub/Sub", "Managed fan-out", "integration", "brand:gcppubsub"),
   p("loadbalancer", "Load Balancer", "Traffic spread", "integration", "ArrowLeftRight"),
   // Agent mechanics & runtime controls
   p("steering", "Steering File", "System directives", "ai", "ScrollText"),
@@ -85,6 +91,9 @@ const EXTENDED: PaletteItem[] = [
   p("tracing", "Tracing & Telemetry", "OTel · LangSmith · Arize", "devops", "Radar"),
   p("langsmith", "LangSmith", "Traces · evals", "devops", "brand:langsmith"),
   p("arize", "Arize Phoenix", "LLM observability", "devops", "brand:arize"),
+  p("langfuse", "Langfuse", "Traces · evals · costs", "devops", "brand:langfuse"),
+  p("cloudwatch", "Amazon CloudWatch", "Metrics · alarms", "devops", "brand:cloudwatch"),
+  p("datadog", "Datadog", "APM · LLM observability", "devops", "brand:datadog"),
   p("ratelimiter", "Rate Limiter", "Quotas · budgets", "security", "Gauge"),
   // Interfaces & endpoints
   p("extension", "Browser Extension", "In-page assistant", "application", "AppWindow"),

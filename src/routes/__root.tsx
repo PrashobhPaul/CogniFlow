@@ -8,6 +8,7 @@ import {
 } from "@tanstack/react-router";
 
 import { Toaster } from "@/components/ui/sonner";
+import { BRAND, assetUrl, pageTitle } from "@/lib/brand";
 import "../styles.css";
 
 function NotFoundComponent() {
@@ -64,18 +65,26 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   );
 }
 
+/** Absolute social-card URL; crawlers need a full origin, not a base-relative path. */
+function ogImageUrl(): string {
+  const path = assetUrl(BRAND.assets.ogImage);
+  return typeof window === "undefined" ? path : new URL(path, window.location.origin).href;
+}
+
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   head: () => ({
     meta: [
-      { title: "ArchAnimate — open-source architecture motion studio" },
-      {
-        name: "description",
-        content:
-          "Free, open-source studio for animated software architecture diagrams: design components, watch real data flow move between them, export GIF, video and slides — all in the browser.",
-      },
-      { name: "author", content: "Prashobh Paul" },
-      { property: "og:title", content: "ArchAnimate" },
+      { title: pageTitle() },
+      { name: "description", content: BRAND.description },
+      { name: "author", content: BRAND.author },
+      { name: "application-name", content: BRAND.name },
+      { property: "og:title", content: `${BRAND.name} — ${BRAND.tagline}` },
+      { property: "og:description", content: BRAND.description },
       { property: "og:type", content: "website" },
+      { property: "og:image", content: ogImageUrl() },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: `${BRAND.name} — ${BRAND.tagline}` },
+      { name: "twitter:image", content: ogImageUrl() },
     ],
   }),
   component: RootComponent,
