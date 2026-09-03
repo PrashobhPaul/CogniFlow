@@ -5,10 +5,10 @@
   "license": "MIT",
   "private": true,
   "type": "module",
-  "homepage": "https://prashobhpaul.github.io/ArchAnimate/",
+  "homepage": "https://cogniflow.prashobhpaul.com",
   "repository": {
     "type": "git",
-    "url": "https://github.com/PrashobhPaul/ArchAnimate"
+    "url": "https://github.com/PrashobhPaul/CogniFlow"
   },
   "scripts": {
     "dev": "node scripts/copy-ort.mjs && vite",
@@ -16,6 +16,8 @@
     "preview": "vite preview",
     "vendor-model": "node scripts/vendor-model.mjs",
     "brand": "node scripts/build-brand.mjs",
+    "test": "bun test tests/",
+    "mcp": "bun run mcp/server.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint": "eslint .",
     "format": "prettier --write ."

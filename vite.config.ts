@@ -5,7 +5,7 @@ import tsconfigPaths from "vite-tsconfig-paths";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 
 /**
- * Static SPA build. `BASE_PATH` (e.g. "/ArchAnimate/") is set by the GitHub
+ * Static SPA build. `BASE_PATH` (e.g. "/CogniFlow/") is set by the GitHub
  * Pages workflow; local dev and root-domain hosting use "/".
  */
 export default defineConfig({

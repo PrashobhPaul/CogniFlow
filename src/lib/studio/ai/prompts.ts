@@ -1,4 +1,4 @@
-import { SEMANTICS } from "../candidate";
+import { SEMANTICS, type Candidate } from "../candidate";
 import { PALETTE } from "../palette";
 
 /**
@@ -52,6 +52,118 @@ export function userPrompt(
   return `Compile this architecture description into JSON:\n\n${instructions ?? ""}`;
 }
 
+/**
+ * Line-oriented arrow DSL for small in-browser models. Roughly half the output
+ * tokens of the JSON schema, every line parses independently (truncation loses
+ * at most one line), and streaming becomes visible because TextStreamer
+ * flushes on newlines. Grammar:
+ *   title: <text>
+ *   <id> = <Label> [<component_type>]
+ *   <src> -> <dst> : <payload label> | <semantic_type> | <protocol>
+ * Only the ids and the arrow are required.
+ */
+export const DSL_SYSTEM_PROMPT = `You turn software architecture descriptions into a compact diagram list. Reply with ONLY these line types, one per line, no prose, no JSON, no markdown:
+title: <short title>
+<id> = <Label> [<type>]
+<src> -> <dst> : <payload> | <semantic> | <protocol>
+Rules: id is snake_case. <type> is one of: ${TYPES}. <semantic> is one of: ${SEMANTICS.join(", ")}. Include the response path back to the caller when one exists.
+Example input: "Web app calls the API gateway, which streams tokens from the LLM back to the web app."
+Example output:
+title: LLM app
+web_app = Web App [web]
+api_gateway = API Gateway [api]
+llm = LLM [llm]
+web_app -> api_gateway : request | request | REST
+api_gateway -> llm : prompt | request | REST
+llm -> web_app : token stream | stream | SSE`;
+
+const DSL_NODE_RE = /^([a-z0-9_]+)\s*=\s*([^[\]]+?)\s*(?:\[([^\]]+)\])?\s*$/i;
+const DSL_EDGE_RE = /^([a-z0-9_]+)\s*->\s*([a-z0-9_]+)\s*(?::\s*(.*))?$/i;
+
+/** Parse the arrow DSL into a Candidate. Unreadable lines become warnings. */
+export function parseDsl(raw: string): Candidate {
+  const nodes = new Map<string, { id: string; label: string; component_type?: string }>();
+  const edges: Candidate["edges"] = [];
+  const warnings: string[] = [];
+  let title: string | undefined;
+  for (const rawLine of raw.replace(/```[a-z]*\n?/gi, "").split("\n")) {
+    const line = rawLine.trim();
+    if (!line) continue;
+    const t = line.match(/^title\s*:\s*(.+)$/i);
+    if (t) {
+      title = t[1]!.trim().slice(0, 120);
+      continue;
+    }
+    const n = line.match(DSL_NODE_RE);
+    if (n && !line.includes("->")) {
+      const id = n[1]!.toLowerCase();
+      nodes.set(id, {
+        id,
+        label: n[2]!.trim().slice(0, 80),
+        ...(n[3] ? { component_type: n[3]!.trim().toLowerCase().slice(0, 40) } : {}),
+      });
+      continue;
+    }
+    const e = line.match(DSL_EDGE_RE);
+    if (e) {
+      const [label, semantic, protocol] = (e[3] ?? "").split("|").map((p) => p.trim());
+      const source = e[1]!.toLowerCase();
+      const target = e[2]!.toLowerCase();
+      // The model may reference nodes it never declared; declare them implicitly.
+      for (const id of [source, target])
+        if (!nodes.has(id)) nodes.set(id, { id, label: id.replace(/_/g, " ") });
+      const semanticOk = semantic && (SEMANTICS as readonly string[]).includes(semantic);
+      edges.push({
+        source_node_id: source,
+        target_node_id: target,
+        ...(label ? { label: label.slice(0, 80) } : {}),
+        ...(semanticOk
+          ? { semantic_type: semantic as Candidate["edges"][number]["semantic_type"] }
+          : {}),
+        ...(protocol ? { protocol: protocol.slice(0, 40) } : {}),
+      });
+      continue;
+    }
+    warnings.push(`Skipped unreadable model line: "${line.slice(0, 60)}"`);
+  }
+  if (nodes.size === 0) throw new Error("The model produced no components.");
+  return {
+    ...(title !== undefined ? { title } : {}),
+    nodes: [...nodes.values()],
+    edges,
+    warnings,
+  };
+}
+
+/**
+ * Best-effort repair for truncated model JSON: closes open strings, strips a
+ * dangling partial element and trailing commas, then balances brackets.
+ */
+export function repairJson(fragment: string): string {
+  let text = fragment;
+  const stack: string[] = [];
+  let inString = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inString) {
+      if (ch === "\\") i++;
+      else if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') inString = true;
+    else if (ch === "{" || ch === "[") stack.push(ch);
+    else if (ch === "}" || ch === "]") stack.pop();
+  }
+  if (inString) text += '"';
+  // Drop a dangling partial element after the last complete value.
+  text = text.replace(/,\s*(?:"[^"]*"?\s*:?\s*[^,\]}]*)?$/s, "");
+  while (stack.length) {
+    const open = stack.pop();
+    text += open === "{" ? "}" : "]";
+  }
+  return text;
+}
+
 /** Extract the first JSON object from a model reply (handles code fences, chatter, trailing text). */
 export function extractJson(raw: string): unknown {
   const stripped = raw.replace(/```(?:json)?/gi, "").trim();
@@ -74,8 +186,12 @@ export function extractJson(raw: string): unknown {
       if (depth === 0) return JSON.parse(stripped.slice(start, i + 1));
     }
   }
-  // Unterminated: try the greedy fallback before giving up.
-  const end = stripped.lastIndexOf("}");
-  if (end > start) return JSON.parse(stripped.slice(start, end + 1));
-  throw new Error("The model returned an unreadable graph.");
+  // Unterminated (usually a truncated generation): repair before giving up.
+  try {
+    return JSON.parse(repairJson(stripped.slice(start)));
+  } catch {
+    const end = stripped.lastIndexOf("}");
+    if (end > start) return JSON.parse(stripped.slice(start, end + 1));
+    throw new Error("The model returned an unreadable graph.");
+  }
 }

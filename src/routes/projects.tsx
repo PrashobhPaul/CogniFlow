@@ -4,7 +4,7 @@ import { History, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { deleteProject, listProjects, type Project } from "@/lib/studio/projects";
+import { deleteProject, draftProjectIds, listProjects, type Project } from "@/lib/studio/projects";
 
 export const Route = createFileRoute("/projects")({
   head: () => ({
@@ -31,6 +31,7 @@ function Projects() {
   const navigate = useNavigate();
   const [projects, setProjects] = useState<Project[]>(() => listProjects());
   const [openHistory, setOpenHistory] = useState<string | null>(null);
+  const drafts = draftProjectIds();
 
   return (
     <AppShell
@@ -50,7 +51,14 @@ function Projects() {
             <Card key={p.project_id} className="p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="text-sm font-medium">{p.name}</p>
+                  <p className="text-sm font-medium">
+                    {p.name}
+                    {drafts.has(p.project_id) && (
+                      <span className="ml-2 rounded bg-[color:var(--flow-retry)]/15 px-1.5 py-0.5 text-[10px] font-normal text-[color:var(--flow-retry)]">
+                        unsaved changes
+                      </span>
+                    )}
+                  </p>
                   <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
                     v{p.graph_version} · hash {p.graph_hash} · {p.graph.nodes.length} components ·{" "}
                     {p.graph.edges.length} connectors · source {p.source_type}

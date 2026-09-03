@@ -1,0 +1,15 @@
+{
+  "name": "cogniflow-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP server for CogniFlow: compile architecture descriptions or Mermaid into validated animated-architecture graphs, render SVG/Mermaid/draw.io, and mint share links — so any LLM can hand off diagramming instead of drawing token-expensive SVG itself.",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "bun run server.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "zod": "^3.25.76"
+  }
+}

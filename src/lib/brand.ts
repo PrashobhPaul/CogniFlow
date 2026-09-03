@@ -8,8 +8,9 @@ export const BRAND = {
   description:
     "Free, open-source studio for animated software architecture diagrams: design components, watch real data flow move between them, export GIF, video and slides — all in the browser.",
   author: "Prashobh Paul",
-  repoUrl: "https://github.com/PrashobhPaul/ArchAnimate",
-  repoLabel: "github.com/PrashobhPaul/ArchAnimate",
+  repoUrl: "https://github.com/PrashobhPaul/CogniFlow",
+  repoLabel: "github.com/PrashobhPaul/CogniFlow",
+  siteUrl: "https://cogniflow.prashobhpaul.com",
   /** Static assets under public/brand, resolved against Vite's base path. */
   assets: {
     mark: "brand/cogniflow-mark.svg",

@@ -4,7 +4,7 @@ import { routeTree } from "./routeTree.gen";
 
 /**
  * Static SPA router. `BASE_URL` comes from Vite (`BASE_PATH` at build time) so
- * the same bundle works at a domain root and under /ArchAnimate/ on GitHub Pages.
+ * the same bundle works at a domain root and under /CogniFlow/ on GitHub Pages.
  */
 export const getRouter = () => {
   const queryClient = new QueryClient();

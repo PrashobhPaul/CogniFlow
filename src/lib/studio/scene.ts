@@ -1,4 +1,4 @@
-import { Position, getSmoothStepPath } from "@xyflow/react";
+import { Position, getBezierPath, getSmoothStepPath, getStraightPath } from "@xyflow/react";
 import type { AirGraph } from "./air";
 import { validateGraph, isExportable } from "./air";
 import { EXPORT_THEMES, FONT_MONO, FONT_SANS, type ExportTheme, type ExportThemeId } from "./theme";
@@ -218,15 +218,26 @@ export function buildScene(graph: AirGraph, opts: SceneOptions = {}): Scene {
   const rawEdges = graph.edges.map((e) => {
     const s = byId.get(e.source_node_id)!;
     const t = byId.get(e.target_node_id)!;
-    const [d, labelX, labelY] = getSmoothStepPath({
+    // Must mirror FlowEdge.tsx exactly so exports match the canvas.
+    const geom = {
       sourceX: s.x + s.w,
       sourceY: s.y + s.h / 2,
       sourcePosition: Position.Right,
       targetX: t.x,
       targetY: t.y + t.h / 2,
       targetPosition: Position.Left,
-      borderRadius: 18,
-    });
+    };
+    const [d, labelX, labelY] =
+      e.path_type === "bezier"
+        ? getBezierPath(geom)
+        : e.path_type === "straight"
+          ? getStraightPath({
+              sourceX: geom.sourceX,
+              sourceY: geom.sourceY,
+              targetX: geom.targetX,
+              targetY: geom.targetY,
+            })
+          : getSmoothStepPath({ ...geom, borderRadius: 18 });
     const motion = motionById.get(e.id);
     const protoW = measureText(e.protocol, chipFont(true));
     const labelW = e.label ? measureText(e.label, chipFont(false)) : 0;

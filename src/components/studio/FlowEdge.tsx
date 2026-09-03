@@ -1,4 +1,11 @@
-import { BaseEdge, EdgeLabelRenderer, getSmoothStepPath, type EdgeProps } from "@xyflow/react";
+import {
+  BaseEdge,
+  EdgeLabelRenderer,
+  getBezierPath,
+  getSmoothStepPath,
+  getStraightPath,
+  type EdgeProps,
+} from "@xyflow/react";
 import { useStudio } from "@/lib/studio/store";
 import { SEMANTIC_COLORS, type FlowEdgeData } from "@/lib/studio/types";
 
@@ -55,15 +62,21 @@ export function FlowEdge({
   const speedScale = useStudio((s) => s.speedScale);
   const showLabels = useStudio((s) => s.showLabels);
 
-  const [path, labelX, labelY] = getSmoothStepPath({
-    sourceX,
-    sourceY,
-    targetX,
-    targetY,
-    sourcePosition,
-    targetPosition,
-    borderRadius: 18,
-  });
+  const pathType = d.pathType ?? "smoothstep";
+  const [path, labelX, labelY] =
+    pathType === "bezier"
+      ? getBezierPath({ sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition })
+      : pathType === "straight"
+        ? getStraightPath({ sourceX, sourceY, targetX, targetY })
+        : getSmoothStepPath({
+            sourceX,
+            sourceY,
+            targetX,
+            targetY,
+            sourcePosition,
+            targetPosition,
+            borderRadius: 18,
+          });
 
   const color = SEMANTIC_COLORS[d.semanticType];
   const pathId = `p_${id}`;

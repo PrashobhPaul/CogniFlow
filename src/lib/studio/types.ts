@@ -18,6 +18,10 @@ export type ExecutionMode = "synchronous" | "asynchronous" | "streaming" | "batc
 
 export type Grammar = "packet" | "stream" | "dense" | "pulse" | "batch";
 
+export type EdgePathType = "smoothstep" | "bezier" | "straight";
+
+export const EDGE_PATH_TYPES: EdgePathType[] = ["smoothstep", "bezier", "straight"];
+
 export type NodeCategory =
   "ai" | "data" | "integration" | "security" | "application" | "cloud" | "devops";
 
@@ -59,6 +63,7 @@ export interface FlowEdgeData {
   size: number; // particle radius
   label?: string | undefined;
   enabled: boolean;
+  pathType?: EdgePathType | undefined;
   [key: string]: unknown;
 }
 

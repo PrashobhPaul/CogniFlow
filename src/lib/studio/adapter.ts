@@ -29,6 +29,7 @@ export function toAir(nodes: ArchNode[], edges: FlowEdge[]): AirGraph {
       execution_mode: d.executionMode ?? "synchronous",
       payload_type: d.payloadType,
       label: d.label,
+      ...(d.pathType && d.pathType !== "smoothstep" ? { path_type: d.pathType } : {}),
     };
   });
 
@@ -87,6 +88,7 @@ export function fromAir(graph: AirGraph): { nodes: ArchNode[]; edges: FlowEdge[]
         size: motion?.size ?? preset.size,
         label: e.label,
         enabled: motion?.enabled ?? true,
+        pathType: e.path_type ?? "smoothstep",
       } satisfies FlowEdgeData,
     };
   });

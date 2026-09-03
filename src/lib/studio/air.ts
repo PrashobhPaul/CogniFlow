@@ -29,6 +29,7 @@ export const directionSchema = z.enum(["forward", "reverse", "bidirectional"]);
 export const executionModeSchema = z.enum(["synchronous", "asynchronous", "streaming", "batch"]);
 export const grammarSchema = z.enum(["packet", "stream", "dense", "pulse", "batch"]);
 export const nodeStatusSchema = z.enum(["auto", "idle", "executing", "success", "retry", "error"]);
+export const edgePathTypeSchema = z.enum(["smoothstep", "bezier", "straight"]);
 
 export const airNodeSchema = z.object({
   id: z.string().min(1),
@@ -56,6 +57,8 @@ export const airEdgeSchema = z.object({
   execution_mode: executionModeSchema,
   payload_type: z.string().optional(),
   label: z.string().optional(),
+  /** Connector routing; omitted means smoothstep (the historical default). */
+  path_type: edgePathTypeSchema.optional(),
   metadata: z.record(z.unknown()).optional(),
 });
 

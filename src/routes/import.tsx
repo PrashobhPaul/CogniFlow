@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AlertTriangle, FileCode2, ImageUp, Loader2, Settings2, Upload } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { pageTitle } from "@/lib/brand";
@@ -10,10 +10,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { GraphReview } from "@/components/studio/GraphReview";
 import { ModelStatus } from "@/components/studio/ModelStatus";
 import { importDrawio } from "@/lib/studio/drawio";
+import { importMermaid } from "@/lib/studio/mermaid";
 import type { AirGraph } from "@/lib/studio/air";
 import { autoLayout } from "@/lib/studio/layout";
 import { createProject, type SourceType } from "@/lib/studio/projects";
 import { compileWithAi } from "@/lib/studio/ai/compile";
+import { preloadLocalModel } from "@/lib/studio/ai/local";
 import { candidateToGraph } from "@/lib/studio/candidate";
 import { useEntitlements } from "@/lib/studio/use-entitlements";
 
@@ -45,6 +47,9 @@ const readAsDataUrl = (file: File) =>
 
 function ImportPage() {
   const navigate = useNavigate();
+  useEffect(() => {
+    preloadLocalModel("vision");
+  }, []);
   const fileInput = useRef<HTMLInputElement>(null);
   const imageInput = useRef<HTMLInputElement>(null);
   const { entitlements } = useEntitlements();
@@ -112,11 +117,26 @@ function ImportPage() {
     }
   };
 
+  const handleMermaidText = (text: string, refName: string | null) => {
+    try {
+      const result = importMermaid(text);
+      setSource("mermaid");
+      setGraph(result.graph);
+      setWarnings(result.warnings);
+      setEngine("deterministic Mermaid parser");
+      setFileRef(refName);
+      if (!name && (result.title || refName)) setName(result.title ?? refName ?? "");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Mermaid import failed.");
+    }
+  };
+
   const handleFile = async (file: File) => {
     reset();
     const ext = file.name.toLowerCase().split(".").pop();
-    if (ext !== "drawio" && ext !== "xml") {
-      setError("Only .drawio and .xml files are accepted.");
+    const mermaidExt = ext === "mmd" || ext === "mermaid" || ext === "md" || ext === "txt";
+    if (ext !== "drawio" && ext !== "xml" && !mermaidExt) {
+      setError("Only .drawio, .xml, .mmd, .mermaid, .md and .txt files are accepted.");
       return;
     }
     if (file.size > MAX_BYTES) {
@@ -125,6 +145,10 @@ function ImportPage() {
     }
     try {
       const text = await file.text();
+      if (mermaidExt) {
+        handleMermaidText(text, file.name);
+        return;
+      }
       const result = importDrawio(text);
       const laid = autoLayout(result.graph);
       setSource("drawio");
@@ -137,6 +161,8 @@ function ImportPage() {
       setError(e instanceof Error ? e.message : "Import failed.");
     }
   };
+
+  const [mermaidText, setMermaidText] = useState("");
 
   const accept = () => {
     if (!graph) return;
@@ -152,7 +178,7 @@ function ImportPage() {
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="space-y-4 p-5">
           <p className="flex items-center gap-2 text-sm font-medium">
-            <FileCode2 className="h-4 w-4 text-primary" /> draw.io / mxGraph XML
+            <FileCode2 className="h-4 w-4 text-primary" /> draw.io XML · Mermaid flowchart
           </p>
           <div
             onDragOver={(e) => e.preventDefault()}
@@ -165,7 +191,7 @@ function ImportPage() {
           >
             <Upload className="h-5 w-5 text-muted-foreground" />
             <p className="mt-3 text-xs text-muted-foreground">
-              Drop an uncompressed .drawio / .xml file, or
+              Drop an uncompressed .drawio / .xml file or a .mmd Mermaid flowchart, or
             </p>
             <Button
               size="sm"
@@ -178,7 +204,7 @@ function ImportPage() {
             <input
               ref={fileInput}
               type="file"
-              accept=".drawio,.xml,application/xml,text/xml"
+              accept=".drawio,.xml,.mmd,.mermaid,.md,.txt,application/xml,text/xml,text/plain"
               className="hidden"
               onChange={(e) => {
                 const file = e.target.files?.[0];
@@ -186,12 +212,34 @@ function ImportPage() {
               }}
             />
           </div>
-          <Input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Project name"
-            className="bg-input/60"
+          <Textarea
+            value={mermaidText}
+            onChange={(e) => setMermaidText(e.target.value)}
+            rows={4}
+            placeholder={
+              "Or paste Mermaid directly:\nflowchart LR\n  app[Web App] -->|prompt| llm[LLM]"
+            }
+            className="bg-input/50 font-mono text-xs"
           />
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={!mermaidText.trim()}
+              onClick={() => {
+                reset();
+                handleMermaidText(mermaidText, null);
+              }}
+            >
+              Parse Mermaid
+            </Button>
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Project name"
+              className="bg-input/60"
+            />
+          </div>
         </Card>
 
         <Card className="space-y-3 p-5">

@@ -43,6 +43,9 @@ jobs:
       - name: Typecheck
         run: bunx tsc --noEmit -p tsconfig.json
 
+      - name: Test
+        run: bun test tests/
+
       # Reads the Pages configuration: base_path is "/<repo>" for a project
       # site and "" when a custom domain (CNAME) serves the site from "/".
       - id: pages

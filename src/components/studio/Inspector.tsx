@@ -2,6 +2,7 @@ import { Fragment } from "react";
 import { ArrowLeftRight, ArrowRight, Trash2 } from "lucide-react";
 import { useStudio } from "@/lib/studio/store";
 import {
+  EDGE_PATH_TYPES,
   EXECUTION_MODES,
   GRAMMAR_PRESETS,
   NODE_STATUSES,
@@ -221,6 +222,20 @@ export function Inspector() {
                     className={`chip ${(edge.data as FlowEdgeData).executionMode === m ? "chip-active" : ""}`}
                   >
                     {m}
+                  </button>
+                ))}
+              </div>
+            </Row>
+
+            <Row label="Connector path">
+              <div className="grid grid-cols-3 gap-1.5">
+                {EDGE_PATH_TYPES.map((pt) => (
+                  <button
+                    key={pt}
+                    onClick={() => updateEdgeData(edge.id, { pathType: pt })}
+                    className={`chip ${((edge.data as FlowEdgeData).pathType ?? "smoothstep") === pt ? "chip-active" : ""}`}
+                  >
+                    {pt === "smoothstep" ? "step" : pt}
                   </button>
                 ))}
               </div>

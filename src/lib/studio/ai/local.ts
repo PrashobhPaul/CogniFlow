@@ -104,9 +104,19 @@ function ensureWorker(): Worker {
         const key = `${m.kind}:${m.modelId}:${m.file ?? "?"}`;
         const files = { ...state.files, [key]: m as ModelProgress };
         const values = Object.values(files).filter((f) => f.progress !== null);
-        const overall = values.length
-          ? values.reduce((s, f) => s + (f.progress ?? 0), 0) / (values.length * 100)
-          : 0;
+        // Byte-weighted where sizes are known, so a 200 MB decoder at 10% does
+        // not read as "55% done" because tokenizer.json finished.
+        const sized = values.filter((f) => f.total && f.total > 0);
+        const overall =
+          sized.length === values.length && sized.length > 0
+            ? sized.reduce((s, f) => s + (f.loaded ?? 0), 0) /
+              Math.max(
+                1,
+                sized.reduce((s, f) => s + (f.total ?? 0), 0),
+              )
+            : values.length
+              ? values.reduce((s, f) => s + (f.progress ?? 0), 0) / (values.length * 100)
+              : 0;
         emit({
           status: state.status === "generating" ? "generating" : "loading",
           files,
@@ -205,6 +215,7 @@ export function generateLocal(opts: {
   imageDataUrl?: string;
   maxNewTokens?: number;
   device?: AiDevice;
+  signal?: AbortSignal | undefined;
 }): Promise<string> {
   return withRuntimeRetry(() => {
     const w = ensureWorker();
@@ -218,6 +229,18 @@ export function generateLocal(opts: {
     });
     return new Promise<string>((resolve, reject) => {
       pending.set(id, { resolve, reject });
+      if (opts.signal) {
+        opts.signal.addEventListener(
+          "abort",
+          () => {
+            worker?.postMessage({ type: "cancel" });
+            pending.delete(id);
+            emit({ status: "ready", partial: "" });
+            reject(new DOMException("Generation cancelled.", "AbortError"));
+          },
+          { once: true },
+        );
+      }
       w.postMessage({
         type: "generate",
         id,
@@ -230,6 +253,22 @@ export function generateLocal(opts: {
         maxNewTokens: opts.maxNewTokens ?? 1024,
       });
     });
+  });
+}
+
+/**
+ * Fire-and-forget warm-up: runtime pre-flight, model download and shader
+ * compilation happen while the user is still typing, so the first compile
+ * responds in seconds instead of minutes. Safe to call repeatedly.
+ */
+export function preloadLocalModel(kind: ModelKind): void {
+  const settings = getAiSettings();
+  if (settings.engine !== "local") return;
+  const modelId = kind === "vision" ? settings.visionModel : settings.textModel;
+  if (!modelId || !state.supported) return;
+  if (state.status === "loading" || state.status === "generating") return;
+  loadLocalModel(kind, modelId).catch(() => {
+    /* surfaced via the status store; the rule engine still works */
   });
 }
 
