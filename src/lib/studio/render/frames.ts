@@ -1,5 +1,6 @@
-import { lockedDuration, type Scene } from "../scene";
+import { NODE, lockedDuration, type Scene } from "../scene";
 import { sceneToSvg } from "./svg";
+import { motionActive, paintNodeOverlay, type PaintSpec } from "./motion";
 
 /**
  * Offline frame painter: rasterises the static scene once, then draws
@@ -79,8 +80,28 @@ export async function createFramePainter(
   const width = opts.even && sceneW % 2 ? sceneW + 1 : sceneW;
   const height = opts.even && sceneH % 2 ? sceneH + 1 : sceneH;
 
-  const staticSvg = sceneToSvg(scene, { animated: false, particles: false });
+  const staticSvg = sceneToSvg(scene, { animated: false, particles: false, nodeMotion: false });
   const staticLayer = await rasterizeSvg(staticSvg, sceneW, sceneH);
+
+  // Component motion (same icon placement as render/svg.ts renderNode).
+  const nodeTracks: PaintSpec[] = [];
+  for (const n of scene.nodes) {
+    if (!motionActive(n) && n.status !== "executing") continue;
+    const textBlockH = NODE.labelLH + (n.subtitle ? NODE.subLH : 0);
+    const contentH = Math.max(NODE.iconBox, textBlockH);
+    const contentTop =
+      n.y + NODE.border + NODE.padY + (n.h - NODE.border * 2 - NODE.padY * 2 - contentH) / 2;
+    nodeTracks.push({
+      motion: n.motion,
+      status: n.status,
+      accent: n.accent,
+      statusColor: n.statusColor,
+      x: n.x + NODE.borderL + NODE.padX,
+      y: contentTop + (contentH - NODE.iconBox) / 2,
+      size: NODE.iconBox,
+      period: lockedDuration(n.period, 1, opts.loopSeconds),
+    });
+  }
 
   const tracks: ParticleTrack[] = [];
   for (const e of scene.edges) {
@@ -120,6 +141,7 @@ export async function createFramePainter(
     ctx.fillStyle = scene.theme.background;
     ctx.fillRect(0, 0, width, height);
     ctx.drawImage(staticLayer, 0, 0);
+    for (const nt of nodeTracks) paintNodeOverlay(ctx, nt, time, scale);
     for (const tr of tracks) {
       ctx.fillStyle = tr.color;
       ctx.shadowColor = tr.color;

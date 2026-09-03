@@ -34,15 +34,40 @@ The logo lives in `public/brand/`: `cogniflow-mark.svg` is the source of truth, 
 (`scripts/build-brand.mjs`) regenerates the favicons, Apple touch icon, light/dark lockups and the
 social card from it. Edit the mark, run the script, commit the outputs.
 
-### Icons
+### Symbol library
 
-Every component is drawn as a 3D medallion (`src/lib/studio/render/icons3d.ts`): crystals for
-foundation models, neural cubes for agents, gear hubs for orchestration, lattice cylinders for
-vector and data systems, portals for gateways and protocols, shields for safety, glass tiles for
-interfaces, scrolls for steering files. Glyphs are lucide icons or brand marks from the CC0
+Every component is drawn as a 3D silhouette (`src/lib/studio/render/icons3d.ts`) that says what the
+thing does, with its own processing animation (`src/lib/studio/render/motion.ts`) and a status
+micro-badge. Glyphs are lucide icons or brand marks from the CC0
 [simple-icons](https://simpleicons.org) set (`src/lib/studio/render/brands.ts`); brands the set does
 not carry get a monogram. Logos remain trademarks of their owners and are used only to denote the
-product in a diagram. The whole set is on the Open source page.
+product in a diagram. The whole set, with live motion samples, is on the Open source page.
+
+| Component                                   | Silhouette                            | Motion while active                       |
+| ------------------------------------------- | ------------------------------------- | ----------------------------------------- |
+| Hosted models (OpenAI, Claude, Gemini, …)   | Neural crystal                        | Perimeter pulse                           |
+| Open / custom LLMs (Llama, Mistral, SLM, …) | Multi-layer neural lattice            | Layer nodes light up in sequence          |
+| Agents, evaluators, rerankers               | Neural cube                           | Thinking ring spins                       |
+| Embedding model                             | Funnel compressing into a dense array | Scan line                                 |
+| Vector stores (Pinecone, Chroma, FAISS, …)  | 3D point cloud                        | Radar sweep                               |
+| Relational / warehouse stores               | Stacked cylinders                     | Vertical pulse                            |
+| Orchestrator, router, planner, workflow     | Dispatch hub with sub-nodes           | Core spins                                |
+| LangGraph, LangChain, CrewAI, …             | Cyclic state ring                     | Ring spins until the loop terminates      |
+| Queues (SQS, RabbitMQ, Kafka)               | Partitioned conveyor belt             | Belt dashes march, FIFO                   |
+| Pub/Sub, load balancer, webhook             | Single entry fanning out              | Concentric ripples                        |
+| API / LLM gateways, MCP, protocols          | Portal                                | Scanning laser                            |
+| Guardrails, rate limiter, AI gateway        | Dual-pillar checkpoint gate           | Scanning laser                            |
+| Observability (LangSmith, Langfuse, OTel…)  | Radar dish with range rings           | Radar sweep                               |
+| Alerts, CloudWatch                          | Heartbeat monitor                     | Double-beat pulse                         |
+| Documents, audio, video, users              | Sheet, waveform, film reel, avatar    | Static; the connector carries the payload |
+| Cloud platforms                             | Platform disc                         | Dashed boundary sweep                     |
+
+Status badges on every icon: **idle** (grey dot), **executing** (spinning ring), **success** (green
+check), **fallback / retry** (amber), **error** (red). By default the badge is derived from the
+connectors that touch the component (error and retry flows win, any active flow means executing);
+set it explicitly per component in the inspector. Connector colours follow the semantic type: blue
+for raw data and files, purple for embeddings, teal for retrieval, green for responses, red for
+errors, amber for events, magenta for streams.
 
 ## Run it locally
 

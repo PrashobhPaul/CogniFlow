@@ -21,12 +21,29 @@ export type Grammar = "packet" | "stream" | "dense" | "pulse" | "batch";
 export type NodeCategory =
   "ai" | "data" | "integration" | "security" | "application" | "cloud" | "devops";
 
+/**
+ * Declared runtime state of a component. "auto" derives the badge from the
+ * connectors that touch the node (error/retry flows, otherwise executing when
+ * any flow is active, idle when none is).
+ */
+export type NodeStatus = "auto" | "idle" | "executing" | "success" | "retry" | "error";
+
+export const NODE_STATUSES: NodeStatus[] = [
+  "auto",
+  "idle",
+  "executing",
+  "success",
+  "retry",
+  "error",
+];
+
 export interface ArchNodeData {
   label: string;
   subtitle?: string | undefined;
   category: NodeCategory;
   icon: string;
   componentType?: string;
+  status?: NodeStatus | undefined;
   [key: string]: unknown;
 }
 

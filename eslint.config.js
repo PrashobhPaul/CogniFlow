@@ -6,7 +6,8 @@ import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: ["dist", ".output", ".vinxi"] },
+  // public/ort is copied from onnxruntime-web at build time (scripts/copy-ort.mjs).
+  { ignores: ["dist", ".output", ".vinxi", "public/ort"] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ["**/*.{ts,tsx}"],

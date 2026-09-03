@@ -28,7 +28,24 @@ export type IconShape =
   | "platform"
   | "gear"
   | "scroll"
-  | "orb";
+  | "orb"
+  // CogniFlow symbol library: functional silhouettes for AI pipelines.
+  | "lattice" // multi-layered neural grid (open / custom LLMs)
+  | "funnel" // embedding: unstructured shapes compress into a dense array
+  | "pointcloud" // vector store: 3D point cloud in a spatial cube
+  | "stack" // relational store: stacked database cylinders
+  | "hub" // orchestrator: central core branching to sub-nodes
+  | "ring" // agent frameworks: cyclic state-machine loop
+  | "conveyor" // queues: partitioned belt, FIFO
+  | "fanout" // pub/sub: one entry fanning out to subscribers
+  | "gate" // guardrails: dual-pillar checkpoint with a scan frame
+  | "radar" // observability: dish with range rings
+  | "sheet" // documents: page with a folded corner
+  | "avatar" // people: framed portrait
+  | "splitter" // chunking: a page passing through a blade
+  | "wave" // audio inputs: waveform bars
+  | "reel" // video / media inputs: film strip
+  | "monitor"; // watchdogs & alerts: heartbeat trace
 
 const SHAPE_FOR_CATEGORY: Record<NodeCategory, IconShape> = {
   ai: "crystal",
@@ -42,7 +59,16 @@ const SHAPE_FOR_CATEGORY: Record<NodeCategory, IconShape> = {
 
 /** Component types whose tier calls for a different base than their category default. */
 const SHAPE_FOR_TYPE: Record<string, IconShape> = {
-  // Agents are neural cubes; models stay crystals.
+  // Foundation models: hosted models stay crystals; open / custom weights are neural lattices.
+  slm: "lattice",
+  llama: "lattice",
+  deepseek: "lattice",
+  mistral: "lattice",
+  ollama: "lattice",
+  huggingface: "lattice",
+  // Embedding: funnel that compresses text into a dense vector.
+  embedder: "funnel",
+  // Agents are neural cubes with a thinking ring.
   agent: "cube",
   subagent: "cube",
   evaluator: "cube",
@@ -52,42 +78,85 @@ const SHAPE_FOR_TYPE: Record<string, IconShape> = {
   reranker: "cube",
   copilot: "cube",
   kiro: "cube",
-  // Frameworks & orchestration: gears and hubs.
-  orchestrator: "gear",
-  planner: "gear",
-  router: "gear",
-  workflow: "gear",
-  statemachine: "gear",
-  dag: "gear",
-  parallel: "gear",
-  langgraph: "gear",
-  langchain: "gear",
-  llamaindex: "gear",
-  autogen: "gear",
-  crewai: "gear",
-  semantickernel: "gear",
-  agentframework: "gear",
+  // Orchestration: a central hub dispatching to sub-nodes.
+  orchestrator: "hub",
+  planner: "hub",
+  router: "hub",
+  parallel: "hub",
+  dag: "hub",
+  workflow: "hub",
+  // Agent frameworks: cyclic state-machine rings.
+  langgraph: "ring",
+  langchain: "ring",
+  llamaindex: "ring",
+  autogen: "ring",
+  crewai: "ring",
+  semantickernel: "ring",
+  agentframework: "ring",
+  statemachine: "ring",
+  // Schedulers, hooks and workers keep the gear.
   n8n: "gear",
   airflow: "gear",
+  hooks: "gear",
+  worker: "gear",
   // Agent mechanics: directive scrolls and isolation chambers.
   steering: "scroll",
   prompts: "scroll",
   skills: "scroll",
-  hooks: "gear",
   memory: "cylinder",
   sandbox: "glass",
   cli: "glass",
-  // Humans and observability: orbs (avatar heads, radar spheres).
-  user: "orb",
-  hitl: "orb",
-  observability: "orb",
-  tracing: "orb",
-  langsmith: "orb",
-  arize: "orb",
-  dashboard: "glass",
-  // Data brands keep the lattice cylinder; caches too.
+  // Vector search: spatial point clouds.
+  vectordb: "pointcloud",
+  search: "pointcloud",
+  pinecone: "pointcloud",
+  chroma: "pointcloud",
+  faiss: "pointcloud",
+  qdrant: "pointcloud",
+  milvus: "pointcloud",
+  weaviate: "pointcloud",
+  // Relational & tabular stores: stacked cylinders.
+  sql: "stack",
+  nosql: "stack",
+  postgres: "stack",
+  warehouse: "stack",
+  enterprise: "stack",
+  // Caches keep the lattice cylinder.
   cache: "cylinder",
   semanticcache: "cylinder",
+  // Data inputs.
+  documents: "sheet",
+  kb: "sheet",
+  parser: "sheet",
+  chunker: "splitter",
+  audio: "wave",
+  video: "reel",
+  // Queues, buses and fan-out.
+  queue: "conveyor",
+  kafka: "conveyor",
+  rabbitmq: "conveyor",
+  sqs: "conveyor",
+  pubsub: "fanout",
+  gcppubsub: "fanout",
+  loadbalancer: "fanout",
+  webhook: "fanout",
+  // Governance checkpoints.
+  guardrail: "gate",
+  aigateway: "gate",
+  ratelimiter: "gate",
+  // Humans.
+  user: "avatar",
+  hitl: "avatar",
+  // Observability: radar dishes and heartbeat monitors.
+  observability: "radar",
+  tracing: "radar",
+  langsmith: "radar",
+  arize: "radar",
+  langfuse: "radar",
+  datadog: "radar",
+  alerts: "monitor",
+  cloudwatch: "monitor",
+  dashboard: "glass",
   // Platforms.
   k8s: "platform",
   serverless: "platform",
@@ -261,6 +330,196 @@ function body(shape: IconShape, ids: { lg: string; hl: string; top: string }, ba
         cy: 32,
         scale: 0.72,
       };
+    case "lattice":
+      return {
+        markup:
+          `<rect x="6" y="6" width="52" height="52" rx="13" fill="url(#${ids.lg})" ${rim} />` +
+          `<path d="M16,18 L32,12 M16,18 L32,26 M16,18 L32,40 M16,32 L32,26 M16,32 L32,40 M16,46 L32,40 M16,46 L32,52 M32,12 L48,20 M32,26 L48,20 M32,26 L48,34 M32,40 L48,34 M32,40 L48,46 M32,52 L48,46" fill="none" stroke="#ffffff" stroke-opacity="0.3" stroke-width="1" />` +
+          `<g fill="#ffffff" fill-opacity="0.6"><circle cx="16" cy="18" r="2.4" /><circle cx="16" cy="32" r="2.4" /><circle cx="16" cy="46" r="2.4" /><circle cx="32" cy="12" r="2.4" /><circle cx="32" cy="26" r="2.4" /><circle cx="32" cy="40" r="2.4" /><circle cx="32" cy="52" r="2.4" /><circle cx="48" cy="20" r="2.4" /><circle cx="48" cy="34" r="2.4" /><circle cx="48" cy="46" r="2.4" /></g>` +
+          `<circle cx="32" cy="32" r="13" fill="${dark}" fill-opacity="0.88" />` +
+          `<rect x="6" y="6" width="52" height="52" rx="13" fill="url(#${ids.hl})" />`,
+        cx: 32,
+        cy: 32,
+        scale: 0.68,
+      };
+    case "funnel":
+      return {
+        markup:
+          `<path d="M6,14 H58 L40,38 V56 L24,60 V38 Z" fill="url(#${ids.lg})" ${rim} />` +
+          `<path d="M24,46 H40 M24,52 H40" stroke="#ffffff" stroke-opacity="0.35" stroke-width="2" />` +
+          `<ellipse cx="32" cy="14" rx="26" ry="6" fill="url(#${ids.top})" ${rim} />` +
+          `<path d="M6,14 H58 L40,38 V56 L24,60 V38 Z" fill="url(#${ids.hl})" />`,
+        cx: 32,
+        cy: 27,
+        scale: 0.62,
+      };
+    case "pointcloud":
+      return {
+        markup:
+          `<polygon points="32,4 56,18 56,46 32,60 8,46 8,18" fill="url(#${ids.lg})" fill-opacity="0.6" ${rim} />` +
+          `<path d="M8,18 L32,32 L56,18 M32,32 V60" fill="none" stroke="#ffffff" stroke-opacity="0.3" />` +
+          `<g fill="#ffffff" fill-opacity="0.8"><circle cx="20" cy="26" r="2" /><circle cx="42" cy="22" r="2.4" /><circle cx="30" cy="44" r="2" /><circle cx="47" cy="40" r="2.2" /><circle cx="17" cy="42" r="1.8" /><circle cx="38" cy="52" r="2" /><circle cx="26" cy="14" r="1.6" /><circle cx="50" cy="29" r="1.6" /></g>` +
+          `<circle cx="32" cy="33" r="12" fill="${dark}" fill-opacity="0.85" />` +
+          `<polygon points="32,4 56,18 56,46 32,60 8,46 8,18" fill="url(#${ids.hl})" />`,
+        cx: 32,
+        cy: 33,
+        scale: 0.66,
+      };
+    case "stack":
+      return {
+        markup:
+          `<path d="M10,34 V50 A22,7 0 0 0 54,50 V34 Z" fill="url(#${ids.lg})" />` +
+          `<rect x="10" y="42" width="44" height="3" fill="#ffffff" fill-opacity="0.22" />` +
+          `<path d="M10,50 A22,7 0 0 0 54,50" fill="none" ${rim} />` +
+          `<ellipse cx="32" cy="34" rx="22" ry="7" fill="url(#${ids.top})" ${rim} />` +
+          `<path d="M10,12 V28 A22,7 0 0 0 54,28 V12 Z" fill="url(#${ids.lg})" />` +
+          `<rect x="10" y="20" width="44" height="3" fill="#ffffff" fill-opacity="0.22" />` +
+          `<path d="M10,28 A22,7 0 0 0 54,28" fill="none" ${rim} />` +
+          `<ellipse cx="32" cy="12" rx="22" ry="7" fill="url(#${ids.top})" ${rim} />` +
+          `<circle cx="32" cy="32" r="11" fill="${dark}" fill-opacity="0.9" />` +
+          `<path d="M10,12 V50 A22,7 0 0 0 54,50 V12 Z" fill="url(#${ids.hl})" />`,
+        cx: 32,
+        cy: 32,
+        scale: 0.6,
+      };
+    case "hub":
+      return {
+        markup:
+          `<path d="M32,32 L32,8 M32,32 L53,20 M32,32 L53,44 M32,32 L32,56 M32,32 L11,44 M32,32 L11,20" fill="none" stroke="url(#${ids.lg})" stroke-width="3" />` +
+          `<g fill="url(#${ids.top})" ${rim}><circle cx="32" cy="8" r="5" /><circle cx="53" cy="20" r="5" /><circle cx="53" cy="44" r="5" /><circle cx="32" cy="56" r="5" /><circle cx="11" cy="44" r="5" /><circle cx="11" cy="20" r="5" /></g>` +
+          `<circle cx="32" cy="32" r="16" fill="url(#${ids.lg})" ${rim} />` +
+          `<circle cx="32" cy="32" r="16" fill="url(#${ids.hl})" />`,
+        cx: 32,
+        cy: 32,
+        scale: 0.68,
+      };
+    case "ring":
+      return {
+        markup:
+          `<circle cx="32" cy="32" r="23" fill="none" stroke="url(#${ids.lg})" stroke-width="9" />` +
+          `<circle cx="32" cy="32" r="27.5" fill="none" ${rim} />` +
+          `<circle cx="32" cy="32" r="23" fill="none" stroke="url(#${ids.hl})" stroke-width="9" />` +
+          `<g fill="url(#${ids.top})" ${rim}><circle cx="32" cy="9" r="5.5" /><circle cx="52" cy="43.5" r="5.5" /><circle cx="12" cy="43.5" r="5.5" /></g>` +
+          `<path d="M45,13.5 L50,12 L48.5,17" fill="none" stroke="#ffffff" stroke-opacity="0.8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />` +
+          `<circle cx="32" cy="32" r="14" fill="${dark}" fill-opacity="0.88" />`,
+        cx: 32,
+        cy: 32,
+        scale: 0.62,
+      };
+    case "conveyor":
+      return {
+        markup:
+          `<rect x="12" y="4" width="40" height="34" rx="9" fill="url(#${ids.lg})" ${rim} />` +
+          `<rect x="12" y="4" width="40" height="34" rx="9" fill="url(#${ids.hl})" />` +
+          `<rect x="4" y="42" width="56" height="16" rx="8" fill="${dark}" ${rim} />` +
+          `<g fill="url(#${ids.top})"><rect x="9" y="46" width="9" height="8" rx="2" /><rect x="21" y="46" width="9" height="8" rx="2" /><rect x="33" y="46" width="9" height="8" rx="2" /><rect x="45" y="46" width="9" height="8" rx="2" /></g>`,
+        cx: 32,
+        cy: 21,
+        scale: 0.7,
+      };
+    case "fanout":
+      return {
+        markup:
+          `<path d="M12,32 L52,12 M12,32 L52,32 M12,32 L52,52" fill="none" stroke="url(#${ids.lg})" stroke-width="4" stroke-linecap="round" />` +
+          `<circle cx="12" cy="32" r="9" fill="url(#${ids.lg})" ${rim} />` +
+          `<g fill="url(#${ids.top})" ${rim}><circle cx="52" cy="12" r="6.5" /><circle cx="52" cy="32" r="6.5" /><circle cx="52" cy="52" r="6.5" /></g>` +
+          `<circle cx="32" cy="32" r="13" fill="${dark}" ${rim} />` +
+          `<circle cx="32" cy="32" r="13" fill="url(#${ids.hl})" />`,
+        cx: 32,
+        cy: 32,
+        scale: 0.58,
+      };
+    case "gate":
+      return {
+        markup:
+          `<rect x="6" y="12" width="11" height="48" rx="4" fill="url(#${ids.lg})" ${rim} />` +
+          `<rect x="47" y="12" width="11" height="48" rx="4" fill="url(#${ids.lg})" ${rim} />` +
+          `<rect x="17" y="20" width="30" height="38" fill="${dark}" fill-opacity="0.6" />` +
+          `<rect x="19" y="22" width="26" height="34" fill="none" stroke="#ffffff" stroke-opacity="0.25" stroke-dasharray="3 3" />` +
+          `<rect x="6" y="6" width="52" height="11" rx="5.5" fill="url(#${ids.top})" ${rim} />` +
+          `<rect x="6" y="6" width="52" height="11" rx="5.5" fill="url(#${ids.hl})" />`,
+        cx: 32,
+        cy: 39,
+        scale: 0.66,
+      };
+    case "radar":
+      return {
+        markup:
+          `<ellipse cx="32" cy="57" rx="18" ry="4" fill="#000000" fill-opacity="0.25" />` +
+          `<circle cx="32" cy="31" r="26" fill="url(#${ids.lg})" ${rim} />` +
+          `<g fill="none" stroke="#ffffff" stroke-opacity="0.22"><circle cx="32" cy="31" r="18" /><circle cx="32" cy="31" r="10" /><path d="M6,31 H58 M32,5 V57" /></g>` +
+          `<path d="M32,31 L58,31 A26,26 0 0 0 50.4,12.6 Z" fill="#ffffff" fill-opacity="0.16" />` +
+          `<circle cx="32" cy="31" r="26" fill="url(#${ids.hl})" />`,
+        cx: 32,
+        cy: 31,
+        scale: 0.72,
+      };
+    case "sheet":
+      return {
+        markup:
+          `<path d="M14,4 H42 L54,16 V60 H14 Z" fill="url(#${ids.lg})" ${rim} />` +
+          `<path d="M42,4 V16 H54 Z" fill="#ffffff" fill-opacity="0.45" />` +
+          `<path d="M22,46 H46 M22,52 H38" fill="none" stroke="#ffffff" stroke-opacity="0.3" stroke-width="2" stroke-linecap="round" />` +
+          `<path d="M14,4 H42 L54,16 V60 H14 Z" fill="url(#${ids.hl})" />`,
+        cx: 34,
+        cy: 30,
+        scale: 0.62,
+      };
+    case "avatar":
+      return {
+        markup:
+          `<rect x="6" y="6" width="52" height="52" rx="14" fill="url(#${ids.lg})" ${rim} />` +
+          `<circle cx="32" cy="30" r="17" fill="${dark}" fill-opacity="0.85" />` +
+          `<rect x="18" y="50" width="28" height="4" rx="2" fill="#ffffff" fill-opacity="0.35" />` +
+          `<rect x="6" y="6" width="52" height="52" rx="14" fill="url(#${ids.hl})" />`,
+        cx: 32,
+        cy: 30,
+        scale: 0.78,
+      };
+    case "splitter":
+      return {
+        markup:
+          `<rect x="16" y="4" width="32" height="24" rx="4" fill="url(#${ids.lg})" ${rim} />` +
+          `<g fill="url(#${ids.lg})" ${rim}><rect x="16" y="38" width="32" height="5" rx="2" /><rect x="16" y="46" width="32" height="5" rx="2" /><rect x="16" y="54" width="32" height="5" rx="2" /></g>` +
+          `<rect x="4" y="29" width="56" height="7" rx="3.5" fill="url(#${ids.top})" ${rim} />` +
+          `<rect x="16" y="4" width="32" height="24" rx="4" fill="url(#${ids.hl})" />`,
+        cx: 32,
+        cy: 16,
+        scale: 0.55,
+      };
+    case "wave":
+      return {
+        markup:
+          `<rect x="6" y="6" width="52" height="52" rx="13" fill="url(#${ids.lg})" ${rim} />` +
+          `<path d="M13,30 V34 M18,26 V38 M23,22 V42 M28,16 V48 M33,20 V44 M38,26 V38 M43,22 V42 M48,28 V36 M53,30 V34" fill="none" stroke="#ffffff" stroke-opacity="0.4" stroke-width="2.4" stroke-linecap="round" />` +
+          `<circle cx="32" cy="32" r="13" fill="${dark}" fill-opacity="0.88" />` +
+          `<rect x="6" y="6" width="52" height="52" rx="13" fill="url(#${ids.hl})" />`,
+        cx: 32,
+        cy: 32,
+        scale: 0.66,
+      };
+    case "reel":
+      return {
+        markup:
+          `<rect x="4" y="10" width="56" height="44" rx="6" fill="url(#${ids.lg})" ${rim} />` +
+          `<g fill="${dark}"><rect x="9" y="13" width="7" height="5" rx="1" /><rect x="21" y="13" width="7" height="5" rx="1" /><rect x="33" y="13" width="7" height="5" rx="1" /><rect x="45" y="13" width="7" height="5" rx="1" /><rect x="9" y="46" width="7" height="5" rx="1" /><rect x="21" y="46" width="7" height="5" rx="1" /><rect x="33" y="46" width="7" height="5" rx="1" /><rect x="45" y="46" width="7" height="5" rx="1" /></g>` +
+          `<rect x="12" y="21" width="40" height="22" rx="3" fill="${dark}" fill-opacity="0.78" />` +
+          `<rect x="4" y="10" width="56" height="44" rx="6" fill="url(#${ids.hl})" />`,
+        cx: 32,
+        cy: 32,
+        scale: 0.6,
+      };
+    case "monitor":
+      return {
+        markup:
+          `<rect x="6" y="6" width="52" height="52" rx="13" fill="url(#${ids.lg})" ${rim} />` +
+          `<circle cx="32" cy="26" r="13" fill="${dark}" fill-opacity="0.85" />` +
+          `<path d="M10,48 H20 L24,40 L29,54 L34,44 L38,48 H54" fill="none" stroke="#ffffff" stroke-opacity="0.8" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />` +
+          `<rect x="6" y="6" width="52" height="52" rx="13" fill="url(#${ids.hl})" />`,
+        cx: 32,
+        cy: 26,
+        scale: 0.62,
+      };
     case "orb":
     default:
       return {
@@ -330,6 +589,36 @@ export function icon3dMarkup(spec: Icon3dSpec): string {
   cache.set(key, markup);
   return markup;
 }
+
+/** Short description of each base silhouette, for the inspector and gallery. */
+export const SHAPE_LABEL: Record<IconShape, string> = {
+  crystal: "Neural crystal",
+  cube: "Neural cube",
+  cylinder: "Lattice cylinder",
+  portal: "Portal",
+  shield: "Shield",
+  glass: "Glass tile",
+  platform: "Platform",
+  gear: "Gear hub",
+  scroll: "Directive scroll",
+  orb: "Orb",
+  lattice: "Neural lattice",
+  funnel: "Embedding funnel",
+  pointcloud: "Point cloud",
+  stack: "Stacked store",
+  hub: "Dispatch hub",
+  ring: "State ring",
+  conveyor: "Conveyor",
+  fanout: "Fan-out",
+  gate: "Checkpoint gate",
+  radar: "Radar",
+  sheet: "Document sheet",
+  avatar: "Avatar frame",
+  splitter: "Splitter",
+  wave: "Waveform",
+  reel: "Film reel",
+  monitor: "Heartbeat monitor",
+};
 
 /** Human-readable label for gallery / tooltips. */
 export function iconTitle(icon: string): string {

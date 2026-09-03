@@ -301,6 +301,17 @@
   .arch-node-icon > svg {
     overflow: visible;
   }
+  /* Component motion + status badge, layered over the medallion. */
+  .arch-node-overlay {
+    position: absolute;
+    inset: 0;
+    display: block;
+    pointer-events: none;
+    line-height: 0;
+  }
+  .arch-node-overlay > svg {
+    overflow: visible;
+  }
 
   .arch-handle {
     width: 8px;

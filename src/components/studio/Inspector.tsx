@@ -4,13 +4,22 @@ import { useStudio } from "@/lib/studio/store";
 import {
   EXECUTION_MODES,
   GRAMMAR_PRESETS,
+  NODE_STATUSES,
   SEMANTIC_COLORS,
   SEMANTIC_TYPES,
   type Direction,
   type ExecutionMode,
   type FlowEdgeData,
   type Grammar,
+  type NodeStatus,
 } from "@/lib/studio/types";
+import { SHAPE_LABEL, shapeFor } from "@/lib/studio/render/icons3d";
+import {
+  NODE_MOTION_LABEL,
+  STATUS_LABEL,
+  motionForShape,
+  resolveStatus,
+} from "@/lib/studio/render/motion";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
@@ -31,6 +40,14 @@ const PROTOCOLS = [
 ];
 const GRAMMARS: Grammar[] = ["packet", "stream", "dense", "pulse", "batch"];
 const DIRECTIONS: Direction[] = ["forward", "reverse", "bidirectional"];
+
+const STATUS_COLOR: Record<Exclude<NodeStatus, "auto">, string> = {
+  idle: "var(--muted-foreground)",
+  executing: "var(--primary)",
+  success: "var(--flow-response)",
+  retry: "var(--flow-retry)",
+  error: "var(--flow-error)",
+};
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -53,6 +70,19 @@ export function Inspector() {
   } = useStudio();
   const edge = edges.find((e) => e.id === selectedEdgeId);
   const node = nodes.find((n) => n.id === selectedNodeId);
+  const nodeShape = node ? shapeFor(node.data.componentType, node.data.category) : null;
+  const nodeMotion = nodeShape ? motionForShape(nodeShape) : null;
+  const resolved = node
+    ? resolveStatus(
+        node.data.status,
+        edges
+          .filter((e) => e.source === node.id || e.target === node.id)
+          .map((e) => {
+            const d = e.data as FlowEdgeData | undefined;
+            return { semantic: d?.semanticType ?? "request", enabled: d?.enabled ?? true };
+          }),
+      )
+    : null;
 
   return (
     <aside className="studio-panel flex w-[300px] shrink-0 flex-col">
@@ -89,8 +119,43 @@ export function Inspector() {
                 className="h-8 bg-input/60 text-xs"
               />
             </Row>
+            <Row label="Status badge">
+              <div className="grid grid-cols-3 gap-1.5">
+                {NODE_STATUSES.map((st) => (
+                  <button
+                    key={st}
+                    onClick={() => updateNodeData(node.id, { status: st })}
+                    className={`chip ${(node.data.status ?? "auto") === st ? "chip-active" : ""}`}
+                    style={st === "auto" ? undefined : { color: STATUS_COLOR[st] }}
+                    title={
+                      st === "auto"
+                        ? "Derived from the connectors: error and retry flows win, any active flow means executing, none means idle."
+                        : STATUS_LABEL[st]
+                    }
+                  >
+                    {st}
+                  </button>
+                ))}
+              </div>
+              {resolved && (
+                <p className="text-[11px] text-muted-foreground">
+                  Showing{" "}
+                  <span style={{ color: STATUS_COLOR[resolved] }}>{STATUS_LABEL[resolved]}</span>
+                  {(node.data.status ?? "auto") === "auto" ? " (derived from connectors)" : ""}.
+                </p>
+              )}
+            </Row>
+            {nodeShape && nodeMotion && (
+              <Row label="Symbol & motion">
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  <span className="text-foreground">{SHAPE_LABEL[nodeShape]}</span> ·{" "}
+                  {NODE_MOTION_LABEL[nodeMotion].label}
+                  <span className="block text-[11px]">{NODE_MOTION_LABEL[nodeMotion].hint}</span>
+                </p>
+              </Row>
+            )}
             <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-              node_id · {node.id}
+              node_id · {node.id} · {node.data.componentType ?? "generic"}
             </p>
           </Fragment>
         )}
