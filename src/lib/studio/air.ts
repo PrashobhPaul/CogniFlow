@@ -40,6 +40,8 @@ export const airNodeSchema = z.object({
   icon: z.string().min(1),
   position: z.object({ x: z.number(), y: z.number() }),
   group_id: z.string().nullable().optional(),
+  /** Optional body: a few bullet lines shown under the label (container nodes). */
+  details: z.array(z.string().min(1)).max(6).optional(),
   /** Declared runtime state; omitted means "auto" (derived from connectors). */
   status: nodeStatusSchema.optional(),
   metadata: z.record(z.unknown()).optional(),
@@ -71,15 +73,29 @@ export const motionEventSchema = z.object({
   enabled: z.boolean(),
 });
 
+/** A titled lane/container drawn behind the nodes whose group_id matches its id. */
+export const airGroupSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().min(1),
+  /** Accent hex (#rrggbb); omitted falls back to a themed default. */
+  color: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/)
+    .optional(),
+});
+
 export const airGraphSchema = z.object({
   air_version: z.literal(AIR_VERSION),
   nodes: z.array(airNodeSchema),
   edges: z.array(airEdgeSchema),
   motion: z.array(motionEventSchema),
+  /** Optional lane definitions; a node joins one via its group_id. */
+  groups: z.array(airGroupSchema).optional(),
 });
 
 export type AirNode = z.infer<typeof airNodeSchema>;
 export type AirEdge = z.infer<typeof airEdgeSchema>;
+export type AirGroup = z.infer<typeof airGroupSchema>;
 export type MotionEvent = z.infer<typeof motionEventSchema>;
 export type AirGraph = z.infer<typeof airGraphSchema>;
 

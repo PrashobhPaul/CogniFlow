@@ -1,4 +1,10 @@
-import { candidateToGraph, type Candidate, type CandidateResult, SEMANTICS } from "./candidate";
+import {
+  candidateToGraph,
+  slug,
+  type Candidate,
+  type CandidateResult,
+  SEMANTICS,
+} from "./candidate";
 import { guessSemantics } from "./classify";
 import { matchPattern } from "./samples";
 
@@ -356,21 +362,36 @@ function objectLabel(words: string | undefined): string | undefined {
   return cleaned && cleaned.length <= 32 ? cleaned.toLowerCase() : undefined;
 }
 
+/**
+ * Split a trailing " : <label>" off an arrow segment so "A -> B : vectors"
+ * labels the connector instead of fusing the word into the target's name.
+ * Only a short, arrow-free trailing phrase after the last colon is taken.
+ */
+function splitSegLabel(raw: string): { text: string; label: string | undefined } {
+  const m = raw.match(/^(.*\S)\s+:\s+([^:|]{1,32})$/);
+  if (m && m[1] && m[2] && !/->|<-/.test(m[2])) {
+    return { text: m[1].trim(), label: m[2].trim().toLowerCase() };
+  }
+  return { text: raw, label: undefined };
+}
+
 export function parseClause(statement: string): { rels: Rel[]; standalone: ParsedPhrase[] } {
   const s = statement.trim();
   if (!s) return { rels: [], standalone: [] };
 
-  // Arrows: A -> B <-> C
+  // Arrows: A -> B <-> C, with an optional trailing edge label ("A -> B : label").
   if (/->|<-|<->/.test(s)) {
     const parts = s.split(/\s*(<->|->|<-)\s*/);
     const rels: Rel[] = [];
     for (let i = 0; i + 2 < parts.length; i += 2) {
-      const left = parts[i] ?? "";
+      const left = splitSegLabel(parts[i] ?? "");
       const op = parts[i + 1] as Op;
-      const right = parts[i + 2] ?? "";
-      if (op === "->") rels.push(...relate(left, right, undefined, "forward"));
-      else if (op === "<-") rels.push(...relate(right, left, undefined, "forward"));
-      else rels.push(...relate(left, right, "message", "bidirectional"));
+      const right = splitSegLabel(parts[i + 2] ?? "");
+      const label = right.label ?? left.label;
+      if (op === "->") rels.push(...relate(left.text, right.text, undefined, "forward", label));
+      else if (op === "<-")
+        rels.push(...relate(right.text, left.text, undefined, "forward", label));
+      else rels.push(...relate(left.text, right.text, "message", "bidirectional", label));
     }
     return { rels, standalone: [] };
   }
@@ -489,10 +510,9 @@ export function compileDescription(input: string): CompileResult {
     text = firstLine.slice(colon + 1) + text.slice(firstLine.length);
   }
 
-  const statements = text
-    .split(/\n|;|(?<=[a-z0-9)])\.\s+|\.$|\bafter that\b|\bfinally\b/i)
-    .map((s) => s.trim())
-    .filter(Boolean);
+  // Lane headers ("# Content Pipeline") open a group the following nodes join.
+  const groups = new Map<string, { id: string; label: string }>();
+  let currentGroup: string | null = null;
 
   const nodes = new Map<string, Candidate["nodes"][number] & { key: string }>();
   const edges: Candidate["edges"] = [];
@@ -501,6 +521,7 @@ export function compileDescription(input: string): CompileResult {
     const existing = nodes.get(p.key);
     if (existing) {
       if (!existing.subtitle && p.subtitle) existing.subtitle = p.subtitle;
+      if (!existing.group_id && currentGroup) existing.group_id = currentGroup;
       return existing.id;
     }
     const node = {
@@ -508,45 +529,62 @@ export function compileDescription(input: string): CompileResult {
       label: p.label,
       key: p.key,
       ...(p.subtitle ? { subtitle: p.subtitle } : {}),
+      ...(currentGroup ? { group_id: currentGroup } : {}),
     };
     nodes.set(p.key, node);
     return node.id;
   };
 
   let parsed = 0;
-  for (const statement of statements) {
-    const { rels, standalone } = parseStatement(statement);
-    if (rels.length === 0 && standalone.length === 0) {
-      if (/[A-Za-z]{3,}/.test(statement)) {
-        warnings.push(
-          `Could not read "${statement.slice(0, 60)}" — use arrows (A -> B) or verbs (A sends events to B).`,
-        );
-      }
+  for (const rawLine of text.split("\n")) {
+    const line = rawLine.trim();
+    if (!line) continue;
+    const header = line.match(/^#{1,3}\s+(.+?)\s*#*$/);
+    if (header) {
+      const label = header[1]!.trim();
+      const id = slug(label);
+      currentGroup = id;
+      if (!groups.has(id)) groups.set(id, { id, label });
       continue;
     }
-    parsed++;
-    for (const p of standalone) ensure(p);
-    for (const r of rels) {
-      const source = ensure(r.source);
-      const target = ensure(r.target);
-      const guess = guessSemantics("", `${r.label ?? ""} ${r.target.label}`);
-      const semantic = r.semantic ?? r.target.semantic ?? guess.semantic;
-      const executionMode =
-        r.target.execution ??
-        r.source.execution ??
-        (semantic === "stream" ? "streaming" : semantic === "event" ? "asynchronous" : undefined);
-      edges.push({
-        id: `e${edges.length + 1}`,
-        source_node_id: source,
-        target_node_id: target,
-        semantic_type: semantic,
-        direction: r.direction,
-        ...(r.target.protocol || r.source.protocol
-          ? { protocol: r.target.protocol ?? r.source.protocol }
-          : {}),
-        ...(executionMode ? { execution_mode: executionMode } : {}),
-        ...(r.label ? { label: r.label } : {}),
-      });
+    const lineStatements = line
+      .split(/;|(?<=[a-z0-9)])\.\s+|\.$|\bafter that\b|\bfinally\b/i)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    for (const statement of lineStatements) {
+      const { rels, standalone } = parseStatement(statement);
+      if (rels.length === 0 && standalone.length === 0) {
+        if (/[A-Za-z]{3,}/.test(statement)) {
+          warnings.push(
+            `Could not read "${statement.slice(0, 60)}" — use arrows (A -> B) or verbs (A sends events to B).`,
+          );
+        }
+        continue;
+      }
+      parsed++;
+      for (const p of standalone) ensure(p);
+      for (const r of rels) {
+        const source = ensure(r.source);
+        const target = ensure(r.target);
+        const guess = guessSemantics("", `${r.label ?? ""} ${r.target.label}`);
+        const semantic = r.semantic ?? r.target.semantic ?? guess.semantic;
+        const executionMode =
+          r.target.execution ??
+          r.source.execution ??
+          (semantic === "stream" ? "streaming" : semantic === "event" ? "asynchronous" : undefined);
+        edges.push({
+          id: `e${edges.length + 1}`,
+          source_node_id: source,
+          target_node_id: target,
+          semantic_type: semantic,
+          direction: r.direction,
+          ...(r.target.protocol || r.source.protocol
+            ? { protocol: r.target.protocol ?? r.source.protocol }
+            : {}),
+          ...(executionMode ? { execution_mode: executionMode } : {}),
+          ...(r.label ? { label: r.label } : {}),
+        });
+      }
     }
   }
 
@@ -576,6 +614,7 @@ export function compileDescription(input: string): CompileResult {
     ...(title ? { title } : {}),
     nodes: [...nodes.values()].map(({ key: _key, ...n }) => n),
     edges,
+    ...(groups.size ? { groups: [...groups.values()] } : {}),
     warnings,
   };
   const result = candidateToGraph(candidate);

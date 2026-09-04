@@ -1,4 +1,14 @@
-import { CHIP, NODE, lockedDuration, type Scene, type SceneEdge, type SceneNode } from "../scene";
+import {
+  CHIP,
+  DETAIL,
+  GROUP,
+  NODE,
+  lockedDuration,
+  type Scene,
+  type SceneEdge,
+  type SceneGroup,
+  type SceneNode,
+} from "../scene";
 import { FONT_MONO, FONT_SANS, hexWithAlpha } from "../theme";
 import { icon3dMarkup } from "./icons3d";
 import { nodeOverlayMarkup } from "./motion";
@@ -79,6 +89,7 @@ export function sceneToSvg(scene: Scene, opts: SvgOptions): string {
       `<rect x="0" y="${scene.contentTop}" width="${scene.width}" height="${scene.contentBottom - scene.contentTop}" fill="url(#grid-dots)" opacity="${t.id === "studio" ? 0.5 : 0.7}" />`,
     );
   }
+  for (const g of scene.groups) bg.push(renderGroup(scene, g));
   if (scene.title) bg.push(renderTitle(scene));
   if (scene.legendBandH) bg.push(renderLegend(scene));
   if (scene.watermark) {
@@ -162,7 +173,8 @@ function renderNode(
   const x = r2(n.x);
   const y = r2(n.y);
   const textX = x + NODE.borderL + NODE.padX + NODE.iconBox + NODE.gap;
-  const textBlockH = NODE.labelLH + (n.subtitle ? NODE.subLH : 0);
+  const detailsH = n.details.length ? DETAIL.gapTop + n.details.length * DETAIL.lh : 0;
+  const textBlockH = NODE.labelLH + (n.subtitle ? NODE.subLH : 0) + detailsH;
   const contentH = Math.max(NODE.iconBox, textBlockH);
   const contentTop =
     y + NODE.border + NODE.padY + (n.h - NODE.border * 2 - NODE.padY * 2 - contentH) / 2;
@@ -170,6 +182,14 @@ function renderNode(
   const textTop = contentTop + (contentH - textBlockH) / 2;
   const labelBaseline = textTop + (NODE.labelLH - NODE.labelSize) / 2 + NODE.labelSize * 0.8;
   const subBaseline = textTop + NODE.labelLH + (NODE.subLH - NODE.subSize) / 2 + NODE.subSize * 0.8;
+  const detailsTop = textTop + NODE.labelLH + (n.subtitle ? NODE.subLH : 0) + DETAIL.gapTop;
+  const detailRows = n.details
+    .map((line, i) => {
+      const baseline =
+        detailsTop + i * DETAIL.lh + (DETAIL.lh - DETAIL.size) / 2 + DETAIL.size * 0.8;
+      return `<text x="${r2(textX)}" y="${r2(baseline)}" fill="${t.foreground}" font-size="${DETAIL.size}">${esc(line)}</text>`;
+    })
+    .join("");
   const iconX = x + NODE.borderL + NODE.padX;
   const icon = icon3dMarkup({
     icon: n.icon,
@@ -204,7 +224,17 @@ function renderNode(
     n.subtitle
       ? `<text x="${r2(textX)}" y="${r2(subBaseline)}" fill="${t.muted}" font-size="${NODE.subSize}" font-family="${FONT_MONO}" letter-spacing="${NODE.subTracking}">${esc(n.subtitle.toUpperCase())}</text>`
       : "",
+    detailRows,
     `</g>`,
+  ].join("");
+}
+
+function renderGroup(scene: Scene, g: SceneGroup): string {
+  const x = r2(g.x);
+  const y = r2(g.y);
+  return [
+    `<rect x="${x}" y="${y}" width="${r2(g.w)}" height="${r2(g.h)}" rx="${GROUP.radius}" fill="${hexWithAlpha(g.color, 0.05)}" stroke="${hexWithAlpha(g.color, 0.4)}" stroke-width="1.5" />`,
+    `<text x="${r2(g.x + 16)}" y="${r2(g.y + 23)}" fill="${g.color}" font-size="${GROUP.titleSize}" font-weight="800" letter-spacing="1.1">${esc(g.label.toUpperCase())}</text>`,
   ].join("");
 }
 

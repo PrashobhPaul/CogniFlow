@@ -43,6 +43,8 @@ export const candidateSchema = z.object({
         subtitle: z.string().max(80).optional(),
         component_type: z.string().max(40).optional(),
         category: z.string().max(40).optional(),
+        group_id: z.string().max(64).nullable().optional(),
+        details: z.array(z.string().min(1).max(80)).max(6).optional(),
       }),
     )
     .max(80),
@@ -61,6 +63,19 @@ export const candidateSchema = z.object({
       }),
     )
     .max(200),
+  groups: z
+    .array(
+      z.object({
+        id: z.string().min(1).max(64),
+        label: z.string().min(1).max(80),
+        color: z
+          .string()
+          .regex(/^#[0-9a-fA-F]{6}$/)
+          .optional(),
+      }),
+    )
+    .max(20)
+    .optional(),
   warnings: z.array(z.string().max(300)).max(40).default([]),
 });
 
@@ -124,7 +139,15 @@ export function candidateToGraph(
       category,
       icon: type === guess.type ? guess.icon : iconForType(type, guess.icon),
       position: { x: 0, y: 0 },
-      group_id: null,
+      group_id: n.group_id ? slug(n.group_id) : null,
+      ...(n.details && n.details.length
+        ? {
+            details: n.details
+              .map((d) => d.trim().slice(0, 80))
+              .filter(Boolean)
+              .slice(0, 6),
+          }
+        : {}),
     });
   }
 
@@ -184,7 +207,19 @@ export function candidateToGraph(
     return { edge_id: e.id, grammar, enabled: true, ...GRAMMAR_PRESETS[grammar] };
   });
 
-  const graph: AirGraph = { air_version: AIR_VERSION, nodes, edges, motion };
+  // Keep only groups that ended up with at least one member node (ids slugged to match).
+  const memberGroupIds = new Set(nodes.map((n) => n.group_id).filter((g): g is string => !!g));
+  const groups = (candidate.groups ?? [])
+    .map((g) => ({ ...g, id: slug(g.id) }))
+    .filter((g) => memberGroupIds.has(g.id));
+
+  const graph: AirGraph = {
+    air_version: AIR_VERSION,
+    nodes,
+    edges,
+    motion,
+    ...(groups.length ? { groups } : {}),
+  };
   return {
     graph: opts.layout === false ? graph : autoLayout(graph),
     warnings,
