@@ -115,7 +115,7 @@ const VERBS: VerbRule[] = [
     semantic: "message",
     bidirectional: true,
   },
-  { re: /\b(retries|retry\s+against|retries\s+against)\b/i, semantic: "retry", label: "retry" },
+  { re: /\b(retries\s+against|retry\s+against|retries)\b/i, semantic: "retry", label: "retry" },
   {
     re: /\b(reports?\s+errors?\s+to|fails?\s+over\s+to|escalates?\s+to)\b/i,
     semantic: "error",

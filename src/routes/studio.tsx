@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import { StudioCanvas } from "@/components/studio/StudioCanvas";
 
-const searchSchema = z.object({ project: z.string().optional() });
+const searchSchema = z.object({ project: z.string().optional(), d: z.string().optional() });
 
 export const Route = createFileRoute("/studio")({
   validateSearch: searchSchema,

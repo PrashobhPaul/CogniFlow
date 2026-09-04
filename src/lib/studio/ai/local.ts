@@ -89,6 +89,8 @@ async function withRuntimeRetry<T>(run: () => Promise<T>): Promise<T> {
   }
 }
 const pending = new Map<number, { resolve: (t: string) => void; reject: (e: Error) => void }>();
+/** The request whose streamed tokens the UI is showing. */
+let activeGenerateId: number | null = null;
 const loadWaiters = new Map<string, { resolve: () => void; reject: (e: Error) => void }[]>();
 
 function ensureWorker(): Worker {
@@ -102,11 +104,28 @@ function ensureWorker(): Worker {
     switch (m.type) {
       case "progress": {
         const key = `${m.kind}:${m.modelId}:${m.file ?? "?"}`;
-        const files = { ...state.files, [key]: m as ModelProgress };
+        const prev = state.files[key];
+        // A 'done' event carries no byte counts; keep the file at 100% instead
+        // of dropping it out of the byte-weighted total (progress regression).
+        const entry =
+          (m as { status?: string }).status === "done" && prev
+            ? { ...prev, progress: 100, loaded: prev.total ?? prev.loaded }
+            : (m as ModelProgress);
+        const files = { ...state.files, [key]: entry };
         const values = Object.values(files).filter((f) => f.progress !== null);
-        const overall = values.length
-          ? values.reduce((s, f) => s + (f.progress ?? 0), 0) / (values.length * 100)
-          : 0;
+        // Byte-weighted where sizes are known, so a 200 MB decoder at 10% does
+        // not read as "55% done" because tokenizer.json finished.
+        const sized = values.filter((f) => f.total && f.total > 0);
+        const overall =
+          sized.length === values.length && sized.length > 0
+            ? sized.reduce((s, f) => s + (f.loaded ?? 0), 0) /
+              Math.max(
+                1,
+                sized.reduce((s, f) => s + (f.total ?? 0), 0),
+              )
+            : values.length
+              ? values.reduce((s, f) => s + (f.progress ?? 0), 0) / (values.length * 100)
+              : 0;
         emit({
           status: state.status === "generating" ? "generating" : "loading",
           files,
@@ -130,6 +149,7 @@ function ensureWorker(): Worker {
         break;
       }
       case "token":
+        if (m.id !== activeGenerateId) break; // stragglers from a cancelled run
         emit({ partial: state.partial + m.text });
         break;
       case "result": {
@@ -205,6 +225,7 @@ export function generateLocal(opts: {
   imageDataUrl?: string;
   maxNewTokens?: number;
   device?: AiDevice;
+  signal?: AbortSignal | undefined;
 }): Promise<string> {
   return withRuntimeRetry(() => {
     const w = ensureWorker();
@@ -216,8 +237,27 @@ export function generateLocal(opts: {
       partial: "",
       error: null,
     });
+    if (opts.signal?.aborted)
+      return Promise.reject(new DOMException("Generation cancelled.", "AbortError"));
+    activeGenerateId = id;
     return new Promise<string>((resolve, reject) => {
-      pending.set(id, { resolve, reject });
+      const onAbort = () => {
+        worker?.postMessage({ type: "cancel" });
+        pending.delete(id);
+        if (activeGenerateId === id) activeGenerateId = null;
+        emit({ status: "ready", partial: "" });
+        reject(new DOMException("Generation cancelled.", "AbortError"));
+      };
+      opts.signal?.addEventListener("abort", onAbort, { once: true });
+      const settle = (fn: (v: never) => void) => (v: never) => {
+        opts.signal?.removeEventListener("abort", onAbort);
+        if (activeGenerateId === id) activeGenerateId = null;
+        fn(v);
+      };
+      pending.set(id, {
+        resolve: settle(resolve) as unknown as (t: string) => void,
+        reject: settle(reject) as unknown as (e: Error) => void,
+      });
       w.postMessage({
         type: "generate",
         id,
@@ -230,6 +270,22 @@ export function generateLocal(opts: {
         maxNewTokens: opts.maxNewTokens ?? 1024,
       });
     });
+  });
+}
+
+/**
+ * Fire-and-forget warm-up: runtime pre-flight, model download and shader
+ * compilation happen while the user is still typing, so the first compile
+ * responds in seconds instead of minutes. Safe to call repeatedly.
+ */
+export function preloadLocalModel(kind: ModelKind): void {
+  const settings = getAiSettings();
+  if (settings.engine !== "local") return;
+  const modelId = kind === "vision" ? settings.visionModel : settings.textModel;
+  if (!modelId || !state.supported) return;
+  if (state.status === "loading" || state.status === "generating") return;
+  loadLocalModel(kind, modelId).catch(() => {
+    /* surfaced via the status store; the rule engine still works */
   });
 }
 

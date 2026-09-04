@@ -6,6 +6,7 @@ import {
   FileJson2,
   Film,
   Image as ImageIcon,
+  Link2,
   Presentation,
   Sparkles,
   X,
@@ -26,6 +27,8 @@ import { useStudio } from "@/lib/studio/store";
 import { toAir } from "@/lib/studio/adapter";
 import { isExportable, validateGraph } from "@/lib/studio/air";
 import { exportDrawio } from "@/lib/studio/drawio";
+import { exportMermaid } from "@/lib/studio/mermaid";
+import { encodeShareGraph, SHARE_URL_LIMIT } from "@/lib/studio/share";
 import {
   canvasToBlob,
   downloadBlob,
@@ -565,6 +568,50 @@ export function ExportCenter() {
                 }))}
               >
                 <FileCode2 className="h-3.5 w-3.5" /> Draw.io XML
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="justify-start gap-2"
+                disabled={!!progress}
+                onClick={() =>
+                  ok
+                    ? downloadText(exportMermaid(graph, projectName), `${slug}.mmd`, "text/plain")
+                    : toast.error("Export blocked: fix the validation errors first.")
+                }
+              >
+                <FileCode2 className="h-3.5 w-3.5" /> Mermaid flowchart
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="justify-start gap-2"
+                disabled={!!progress}
+                onClick={() => {
+                  if (!ok) {
+                    toast.error("Export blocked: fix the validation errors first.");
+                    return;
+                  }
+                  void encodeShareGraph(graph, projectName).then((encoded) => {
+                    const url = new URL(window.location.href);
+                    url.pathname = `${import.meta.env.BASE_URL.replace(/\/$/, "")}/studio`;
+                    url.search = `?d=${encoded}`;
+                    if (url.href.length > SHARE_URL_LIMIT) {
+                      toast.error(
+                        "This diagram is too large for a share link — export the AIR JSON instead.",
+                      );
+                      return;
+                    }
+                    void navigator.clipboard
+                      .writeText(url.href)
+                      .then(() =>
+                        toast.success("Share link copied. Anyone can open it — no account needed."),
+                      )
+                      .catch(() => downloadText(url.href, `${slug}.share-link.txt`, "text/plain"));
+                  });
+                }}
+              >
+                <Link2 className="h-3.5 w-3.5" /> Copy share link
               </Button>
               <Button
                 variant="outline"

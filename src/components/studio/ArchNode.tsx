@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { useStudio, type ArchNode as ArchNodeType } from "@/lib/studio/store";
 import type { FlowEdgeData } from "@/lib/studio/types";
@@ -11,6 +11,20 @@ export function ArchNode({ id, data, selected }: NodeProps<ArchNodeType>) {
   const playing = useStudio((s) => s.playing);
   const speedScale = useStudio((s) => s.speedScale);
   const edges = useStudio((s) => s.edges);
+  const updateNodeData = useStudio((s) => s.updateNodeData);
+  const [editing, setEditing] = useState(false);
+  const [draftLabel, setDraftLabel] = useState(data.label);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editing) inputRef.current?.select();
+  }, [editing]);
+
+  const commitLabel = () => {
+    setEditing(false);
+    const next = draftLabel.trim();
+    if (next && next !== data.label) updateNodeData(id, { label: next });
+  };
   const type =
     typeof data["component_type"] === "string" ? data["component_type"] : data.componentType;
 
@@ -56,10 +70,34 @@ export function ArchNode({ id, data, selected }: NodeProps<ArchNodeType>) {
             speedScale={speedScale}
           />
         </span>
-        <span className="min-w-0">
-          <span className="block truncate text-sm font-semibold tracking-tight text-foreground">
-            {data.label}
-          </span>
+        <span
+          className="min-w-0"
+          onDoubleClick={() => {
+            setDraftLabel(data.label);
+            setEditing(true);
+          }}
+        >
+          {editing ? (
+            <input
+              ref={inputRef}
+              value={draftLabel}
+              onChange={(e) => setDraftLabel(e.target.value)}
+              onBlur={commitLabel}
+              onKeyDown={(e) => {
+                e.stopPropagation();
+                if (e.key === "Enter") commitLabel();
+                if (e.key === "Escape") setEditing(false);
+              }}
+              className="nodrag nopan block w-full min-w-24 rounded border border-ring/60 bg-input/80 px-1 text-sm font-semibold tracking-tight text-foreground outline-none"
+            />
+          ) : (
+            <span
+              className="block truncate text-sm font-semibold tracking-tight text-foreground"
+              title="Double-click to rename"
+            >
+              {data.label}
+            </span>
+          )}
           {data.subtitle && (
             <span className="block truncate font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
               {data.subtitle}

@@ -2,6 +2,7 @@ import { Fragment } from "react";
 import { ArrowLeftRight, ArrowRight, Trash2 } from "lucide-react";
 import { useStudio } from "@/lib/studio/store";
 import {
+  EDGE_PATH_TYPES,
   EXECUTION_MODES,
   GRAMMAR_PRESETS,
   NODE_STATUSES,
@@ -66,7 +67,7 @@ export function Inspector() {
     selectedNodeId,
     updateEdgeData,
     updateNodeData,
-    deleteSelected,
+    deleteById,
   } = useStudio();
   const edge = edges.find((e) => e.id === selectedEdgeId);
   const node = nodes.find((n) => n.id === selectedNodeId);
@@ -89,7 +90,10 @@ export function Inspector() {
       <div className="panel-header">
         <span>{edge ? "Connector & motion" : node ? "Component" : "Inspector"}</span>
         {(edge || node) && (
-          <button onClick={deleteSelected} className="text-muted-foreground hover:text-destructive">
+          <button
+            onClick={() => deleteById(node?.id ?? null, edge?.id ?? null)}
+            className="text-muted-foreground hover:text-destructive"
+          >
             <Trash2 className="h-3.5 w-3.5" />
           </button>
         )}
@@ -226,6 +230,20 @@ export function Inspector() {
               </div>
             </Row>
 
+            <Row label="Connector path">
+              <div className="grid grid-cols-3 gap-1.5">
+                {EDGE_PATH_TYPES.map((pt) => (
+                  <button
+                    key={pt}
+                    onClick={() => updateEdgeData(edge.id, { pathType: pt })}
+                    className={`chip ${((edge.data as FlowEdgeData).pathType ?? "smoothstep") === pt ? "chip-active" : ""}`}
+                  >
+                    {pt === "smoothstep" ? "step" : pt}
+                  </button>
+                ))}
+              </div>
+            </Row>
+
             <Row label="Payload type">
               <Input
                 value={(edge.data as FlowEdgeData).payloadType ?? ""}
@@ -296,7 +314,12 @@ export function Inspector() {
             <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
               edge_id · {edge.id} · {edge.source} → {edge.target}
             </p>
-            <Button variant="outline" size="sm" className="w-full" onClick={deleteSelected}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full"
+              onClick={() => deleteById(null, edge.id)}
+            >
               Delete connector
             </Button>
           </Fragment>

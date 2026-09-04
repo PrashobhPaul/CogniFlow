@@ -1,7 +1,7 @@
 import { candidateSchema, type Candidate } from "../candidate";
 import { endpointChat, type ChatMessage } from "./endpoint";
 import { generateLocal } from "./local";
-import { extractJson, SMALL_MODEL_SYSTEM_PROMPT, SYSTEM_PROMPT, userPrompt } from "./prompts";
+import { DSL_SYSTEM_PROMPT, extractJson, parseDsl, SYSTEM_PROMPT, userPrompt } from "./prompts";
 import { getAiSettings, type AiSettings } from "./settings";
 
 /**
@@ -115,12 +115,36 @@ export async function compileWithAi(input: ModelCompileInput): Promise<ModelComp
   const raw = await generateLocal({
     kind: hasImage ? "vision" : "text",
     modelId,
-    system: hasImage ? SYSTEM_PROMPT : SMALL_MODEL_SYSTEM_PROMPT,
+    // Text uses the compact arrow DSL (about half the output tokens of JSON,
+    // parseable line by line); vision keeps the JSON schema with a bigger budget.
+    system: hasImage ? SYSTEM_PROMPT : DSL_SYSTEM_PROMPT,
     user,
     ...(input.imageDataUrl ? { imageDataUrl: input.imageDataUrl } : {}),
-    maxNewTokens: hasImage ? 768 : 1024,
+    maxNewTokens: hasImage ? 1536 : 1024,
+    ...(input.signal ? { signal: input.signal } : {}),
   });
   try {
+    if (!hasImage) {
+      // DSL first; some models emit JSON regardless, so fall through to it.
+      try {
+        const parsed = candidateSchema.parse(parseDsl(raw));
+        return {
+          candidate: {
+            ...parsed,
+            warnings: [
+              ...parsed.warnings,
+              `Proposed by in-browser · Transformers.js (${modelId}). Verify every component and connector before animating.`,
+            ],
+          },
+          provider: "in-browser · Transformers.js",
+          model: modelId,
+          open_source: true,
+          engine: "local",
+        };
+      } catch {
+        /* fall through to JSON extraction */
+      }
+    }
     return parseCandidate(raw, "in-browser · Transformers.js", modelId, "local");
   } catch (e) {
     throw new Error(

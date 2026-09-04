@@ -254,35 +254,6 @@ function Settings() {
                   </Button>
                   <Button
                     size="sm"
-                    variant="outline"
-                    className="gap-2"
-                    disabled={probing}
-                    onClick={async () => {
-                      setProbing(true);
-                      setProbe(null);
-                      try {
-                        const r = await probeLocalRuntime();
-                        setProbe(r);
-                        const okDevices = r.results.filter((x) => x.ok).map((x) => x.device);
-                        if (okDevices.length)
-                          toast.success(`In-browser runtime OK on ${okDevices.join(" + ")}.`);
-                        else toast.error("The in-browser runtime failed on every device.");
-                      } catch (e) {
-                        toast.error(e instanceof Error ? e.message : "Runtime self-test failed.");
-                      } finally {
-                        setProbing(false);
-                      }
-                    }}
-                  >
-                    {probing ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Activity className="h-3.5 w-3.5" />
-                    )}{" "}
-                    Test runtime
-                  </Button>
-                  <Button
-                    size="sm"
                     variant="ghost"
                     className="gap-2"
                     onClick={async () => {

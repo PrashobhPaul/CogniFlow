@@ -15,7 +15,7 @@ import {
 import { BrandMark } from "@/components/Brand";
 import { useMemo } from "react";
 import { toast } from "sonner";
-import { useStudio } from "@/lib/studio/store";
+import { flushAutosave, useStudio } from "@/lib/studio/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ExportCenter } from "./ExportCenter";
@@ -42,6 +42,7 @@ export function Toolbar() {
     setProjectName,
     graphVersion,
     dirty,
+    autosaveState,
     issues,
   } = useStudio();
 
@@ -66,6 +67,13 @@ export function Toolbar() {
             v{graphVersion}
             {dirty ? "*" : ""} · {nodes.length} components · {edges.length} connectors ·{" "}
             {activeFlows} flows
+            {dirty
+              ? autosaveState === "error"
+                ? " · draft not saved (storage full)"
+                : autosaveState === "saved"
+                  ? " · draft kept"
+                  : " · saving draft…"
+              : ""}
           </p>
         </div>
       </div>
@@ -158,8 +166,9 @@ export function Toolbar() {
           variant="ghost"
           className="h-9 gap-1.5 text-xs"
           onClick={() => {
-            saveProject();
-            toast.success("New graph version saved");
+            flushAutosave();
+            if (saveProject()) toast.success("New graph version saved");
+            else toast.error("Saving failed — browser storage may be full.");
           }}
         >
           <Save className="h-3.5 w-3.5" /> Save

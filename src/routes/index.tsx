@@ -23,6 +23,7 @@ import { createProject } from "@/lib/studio/projects";
 import { BLANK_GRAPH, PATTERNS } from "@/lib/studio/samples";
 import { compileDescription } from "@/lib/studio/compiler";
 import { compileWithAi } from "@/lib/studio/ai/compile";
+import { preloadLocalModel } from "@/lib/studio/ai/local";
 import { candidateToGraph } from "@/lib/studio/candidate";
 import { useEntitlements } from "@/lib/studio/use-entitlements";
 import type { AirGraph } from "@/lib/studio/air";
@@ -51,9 +52,9 @@ const MODES = [
   { id: "image", label: "Upload image / sketch", icon: ImageUp, hint: "PNG, JPG, JPEG, WebP" },
   {
     id: "drawio",
-    label: "Import draw.io / XML",
+    label: "Import draw.io / Mermaid",
     icon: FileCode2,
-    hint: "Deterministic mxGraph parsing",
+    hint: "Deterministic parsers",
   },
   { id: "blank", label: "Start blank", icon: SquareDashed, hint: "Empty infinite canvas" },
 ] as const;

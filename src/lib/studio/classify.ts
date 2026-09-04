@@ -286,7 +286,7 @@ export function guessSemantics(
   if (/tool|mcp|function call|invoke/.test(hay)) return { semantic: "message", protocol: "MCP" };
   if (/upload|file|document|pdf|ingest|export/.test(hay))
     return { semantic: "file", protocol: "S3" };
-  if (/auth|policy|guard|control|approve|validate|gate|hook|check/.test(hay))
+  if (/auth|policy|guard|control|approve|validate|\bgate\b|hook|check/.test(hay))
     return { semantic: "control", protocol: "gRPC" };
   if (/sql|db|database|store|write|read|persist|save|load|log|span|telemetry|audit/.test(hay))
     return { semantic: "data", protocol: "SQL" };

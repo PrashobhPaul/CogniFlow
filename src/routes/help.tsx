@@ -47,6 +47,10 @@ const SECTIONS = [
     body: "The rule engine turns arrows, verbs, containment and fronting into a graph instantly and deterministically. The AI engine — an open-weight model running in your browser, or your own OpenAI-compatible endpoint — proposes a candidate graph that is validated, normalised, laid out and reviewed before it animates. No generated code is ever executed.",
   },
   {
+    title: "Autosave & share links",
+    body: "Unsaved edits are mirrored into a browser draft about a second after you stop typing (and immediately when the tab hides), so a refresh or crash never loses work — the studio offers to restore the draft on reopen. Share links pack the whole graph, compressed, into the URL: anyone can open it animated and editable, with no account and no upload.",
+  },
+  {
     title: "Exports",
     body: "PNG, JPEG, SVG (static or animated), animated GIF, MP4 / WebM (WebCodecs), PPTX storyboard, draw.io XML and the AIR JSON graph all render in the browser from one scene model that mirrors the canvas — same node metrics, same smoothstep connectors, same particle timing — so every file matches what you see.",
   },
@@ -62,6 +66,13 @@ const SHORTCUTS = [
   ["Ctrl / Cmd + Z", "Undo"],
   ["Ctrl / Cmd + Shift + Z", "Redo"],
   ["Ctrl / Cmd + S", "Save a new graph version"],
+  ["Ctrl / Cmd + C / X / V", "Copy, cut, paste the selection"],
+  ["Ctrl / Cmd + D", "Duplicate the selection"],
+  ["Ctrl / Cmd + A", "Select everything"],
+  ["Shift + drag", "Rubber-band multi-select"],
+  ["Double-click a component", "Rename it in place"],
+  ["Drag an edge end", "Reconnect the edge to another component"],
+  ["Right-click", "Context menu: insert, duplicate, delete, auto-layout"],
   ["Delete / Backspace", "Remove the selection"],
 ];
 

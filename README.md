@@ -8,7 +8,7 @@
 Design components on an infinite canvas, watch real data flow move between them, and export
 animated GIFs, videos and slide decks — with an open-weight model that ships with the site.
 
-Live: **https://prashobhpaul.github.io/ArchAnimate/**
+Live: **https://cogniflow.prashobhpaul.com** (GitHub Pages)
 License: **MIT** (models: Apache-2.0, see below)
 
 No backend, no accounts, no telemetry. Everything — the canvas, the compilers, the renderers and
@@ -16,17 +16,21 @@ the AI model — runs in your browser. Hosted on GitHub Pages straight from this
 
 ## What you get
 
-| Feature                        | How                                                                                 |
-| ------------------------------ | ----------------------------------------------------------------------------------- |
-| Describe → diagram             | Rule-based compiler (instant) or an open-weight LLM in the browser                  |
-| Image + instructions → diagram | SmolVLM-500M-Instruct in the browser (or your own endpoint)                         |
-| draw.io import / export        | Deterministic mxGraph parser and serialiser                                         |
-| Animated GIF · animated SVG    | Offline frame painter + `gifenc`, seamless loop-locked timing                       |
-| MP4 (H.264) · WebM (VP9)       | WebCodecs + `mp4-muxer` / `webm-muxer`, MediaRecorder fallback                      |
-| PPTX storyboard                | `pptxgenjs`: animated GIF cover + one narrated slide per flow                       |
-| PNG · JPEG · SVG · AIR JSON    | One scene model that mirrors the canvas, so files match the page                    |
-| Intent prompts                 | "agents for a full AIDLC lifecycle" → the closest reference pattern                 |
-| 3D icon set                    | 120+ volumetric medallions, brand marks included, drawn once for canvas and exports |
+| Feature                        | How                                                                                  |
+| ------------------------------ | ------------------------------------------------------------------------------------ |
+| Describe → diagram             | Rule-based compiler (instant) or an open-weight LLM in the browser                   |
+| Image + instructions → diagram | SmolVLM-500M-Instruct in the browser (or your own endpoint)                          |
+| draw.io import / export        | Deterministic mxGraph parser and serialiser                                          |
+| Mermaid import / export        | Deterministic flowchart parser (subgraphs, fan-out, edge styles) and serialiser      |
+| Autosave & crash recovery      | Debounced browser drafts; a refresh or crash never loses in-progress edits           |
+| Share links                    | Whole diagram compressed into the URL — opens animated and editable, no backend      |
+| MCP server                     | `bun run mcp/server.ts` — Claude / any LLM compiles + renders diagrams token-cheaply |
+| Animated GIF · animated SVG    | Offline frame painter + `gifenc`, seamless loop-locked timing                        |
+| MP4 (H.264) · WebM (VP9)       | WebCodecs + `mp4-muxer` / `webm-muxer`, MediaRecorder fallback                       |
+| PPTX storyboard                | `pptxgenjs`: animated GIF cover + one narrated slide per flow                        |
+| PNG · JPEG · SVG · AIR JSON    | One scene model that mirrors the canvas, so files match the page                     |
+| Intent prompts                 | "agents for a full AIDLC lifecycle" → the closest reference pattern                  |
+| 3D icon set                    | 120+ volumetric medallions, brand marks included, drawn once for canvas and exports  |
 
 ### Brand assets
 
@@ -72,8 +76,8 @@ errors, amber for events, magenta for streams.
 ## Run it locally
 
 ```sh
-git clone https://github.com/PrashobhPaul/ArchAnimate
-cd ArchAnimate
+git clone https://github.com/PrashobhPaul/CogniFlow
+cd CogniFlow
 bun install          # or: npm install
 bun run dev          # http://127.0.0.1:8080
 ```
@@ -104,6 +108,40 @@ committed (for example to pin them or to host on a static server without Actions
 they stay under GitHub's 100 MB per-file limit; `manifest.json` tells the loader how to reassemble them.
 GitHub Pages sites are limited to 1 GB, which fits both default models comfortably.
 
+## Editing
+
+The studio covers the draw.io-class editing basics: multi-select (Shift-drag or
+Cmd/Ctrl-click), copy/paste/cut/duplicate/select-all shortcuts, Delete/Backspace,
+right-click context menus (insert any component at the cursor, duplicate, delete,
+auto-layout), double-click inline rename, drag an edge end to reconnect it, and
+per-connector path styles (step / bezier / straight) that render identically in
+every export. Unsaved work is autosaved to a browser draft (~1 s debounce, flushed
+on tab close); reopening the studio restores it with a Discard option, and the
+Projects page badges projects that carry unsaved drafts.
+
+## Using CogniFlow from Claude or any LLM (MCP)
+
+`mcp/server.ts` is a stdio [MCP](https://modelcontextprotocol.io) server that gives
+any MCP client — Claude Desktop, Claude Code, agent frameworks — the whole compile
+and render pipeline without a browser, so a model can hand off diagram drawing for
+the cost of a ~50-token description instead of generating SVG token by token:
+
+- `cogniflow_compile_architecture` — description or Mermaid → validated graph,
+  narrated flow list, and a `share_url` that opens the animated, editable diagram
+- `cogniflow_render_graph` — an edited graph → mermaid / draw.io / SVG / animated SVG
+- `cogniflow_list_patterns` / `cogniflow_get_pattern` — reference architectures
+- `cogniflow_list_components` — the classification vocabulary
+
+```sh
+cd mcp && bun install       # once
+# Claude Desktop / Claude Code config (see mcp/claude-config.example.json):
+{ "mcpServers": { "cogniflow": { "command": "bun", "args": ["run", "<repo>/mcp/server.ts"] } } }
+```
+
+Share links encode the whole graph (deflate + base64url) in the URL — nothing is
+uploaded anywhere; `src/lib/studio/headless.ts` exposes the same compile/export
+API for scripts and tests (`bun test tests/`).
+
 ## The AI engines
 
 | Engine                   | Where it runs                                                                                                | Configure                                                  |
@@ -125,7 +163,12 @@ with jsDelivr as fallback; the worker pre-flights both locations and downgrades 
 WebGPU fails. Settings → AI engine → **Test runtime** runs a one-op graph on both backends and
 shows exactly which files loaded, without downloading any model.
 
-Whatever the engine, the model only ever _proposes_ a candidate graph. `src/lib/studio/candidate.ts`
+The in-browser engine is tuned for small models: text compiles use a compact
+arrow DSL (about half the output tokens of JSON, streamed line by line, resilient
+to truncation), JSON replies are repaired when truncated, vendored weights are
+fetched in parallel and cached in the browser's Cache Storage so revisits skip
+the network, the model preloads and warms up while you type, and generation can
+be cancelled. Whatever the engine, the model only ever _proposes_ a candidate graph. `src/lib/studio/candidate.ts`
 validates, normalises and lays it out deterministically, and you review it before it animates.
 
 ## Project layout
