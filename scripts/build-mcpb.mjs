@@ -32,7 +32,7 @@ const manifest = {
   description:
     "Turn plain-language architecture descriptions into animated, editable diagrams with share links.",
   long_description:
-    "CogniFlow gives Claude a token-cheap way to draw software architecture: describe a system in a sentence (or paste Mermaid) and get a validated, animated diagram plus a share link that opens in the CogniFlow studio. Includes reference patterns (RAG, GraphRAG, agent fleets) and exports to Mermaid, draw.io and SVG.",
+    "CogniFlow gives Claude a token-cheap way to draw software architecture: describe a system in a sentence (or paste Mermaid) and get a validated, animated diagram plus a share link that opens in the CogniFlow studio. Includes reference patterns (RAG, GraphRAG, agent fleets) and exports to Mermaid, draw.io and SVG.\n\nCrafted by Prashobh Paul.",
   author: { name: "Prashobh Paul" },
   homepage: "https://cogniflow.prashobhpaul.com",
   repository: { type: "git", url: "https://github.com/PrashobhPaul/CogniFlow" },

@@ -86,7 +86,7 @@ const DEFAULT_EXPORT_PREFS: ExportPrefs = {
   steps: true,
   grid: true,
   watermark: true,
-  watermarkText: "CogniFlow · Prashobh Paul",
+  watermarkText: "CogniFlow",
 };
 
 const loadExportPrefs = (): ExportPrefs => {
