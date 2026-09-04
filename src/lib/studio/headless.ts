@@ -75,6 +75,8 @@ export function exportGraph(
         title: opts.name,
         legend: true,
         stepNumbers: true,
+        // Kept as a literal (not BRAND) so this module stays Node-safe.
+        watermark: "CogniFlow",
         ...opts.scene,
       });
       return sceneToSvg(scene, { animated: format === "svg_animated", loopSeconds: 6 });

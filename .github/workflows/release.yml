@@ -1,0 +1,47 @@
+name: Release Claude Desktop extension
+
+# Tag a version (e.g. `git tag v1.0.1 && git push origin v1.0.1`) or run this
+# manually to publish cogniflow.mcpb as a GitHub Release asset, so people can
+# install CogniFlow in Claude Desktop straight from the Releases page.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build .mcpb
+        run: bun run scripts/build-mcpb.mjs
+
+      - name: Smoke test on plain Node
+        run: |
+          cd dist-mcpb/stage
+          printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"ci","version":"0"}}}' \
+            | timeout 20 node server/index.js | grep -q cogniflow-mcp-server
+
+      - name: Publish release with the extension attached
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist-mcpb/cogniflow.mcpb
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || 'latest' }}
+          name: CogniFlow ${{ github.ref_type == 'tag' && github.ref_name || 'latest' }}
+          body: |
+            **CogniFlow for Claude Desktop** — download `cogniflow.mcpb` below and
+            double-click it (or Claude Desktop → Settings → Extensions → Install
+            extension). Claude gets five tools to compile plain-language
+            architecture descriptions into animated, editable diagrams.
+          make_latest: true

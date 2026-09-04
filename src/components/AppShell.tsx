@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { BrandLogo } from "@/components/Brand";
+import { BRAND } from "@/lib/brand";
 
 const NAV = [
   { to: "/", label: "New" },
@@ -48,6 +49,16 @@ export function AppShell({
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">{subtitle}</p>
         )}
         <div className="mt-8">{children}</div>
+        <footer className="mt-16 pt-5 pb-2 text-center text-[10px] tracking-wide text-muted-foreground/50">
+          <a
+            href={BRAND.authorUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="transition-colors hover:text-muted-foreground"
+          >
+            Crafted by {BRAND.author}
+          </a>
+        </footer>
       </main>
     </div>
   );

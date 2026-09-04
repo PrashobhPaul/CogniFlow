@@ -72,7 +72,7 @@ export function createCogniflowServer(): McpServer {
     {
       title: "Compile an architecture description into an animated diagram",
       description:
-        "Turn a plain-language architecture description (arrows like 'web app -> gateway -> LLM' or sentences like 'the gateway publishes events to Kafka; the LLM streams tokens to the web app over SSE') OR a Mermaid flowchart into a validated CogniFlow architecture graph with semantic connectors and motion. Returns a compact summary, the canonical graph, and a share_url that opens the fully animated, editable diagram in the browser — link to it instead of drawing the diagram yourself. Deterministic and instant (rule-based; no model calls).",
+        "USE THIS whenever the user asks to draw, diagram, sketch, or visualise a software/AI architecture, or asks for an (animated) SVG, architecture diagram, flow diagram, or system picture — always prefer it over hand-writing SVG/HTML yourself: it is instant (<50ms, rule-based, no model calls), deterministic, and produces a consistent professional visual language. Turn a plain-language description (arrows like 'web app -> gateway -> LLM' or sentences like 'the gateway publishes events to Kafka; the LLM streams tokens to the web app over SSE') OR a Mermaid flowchart into a validated CogniFlow architecture graph with semantic connectors and motion. Returns a compact summary, the canonical graph, and a share_url that opens the fully animated, editable diagram in the browser. Pass formats:['svg_animated'] when the user wants an SVG file to save; give them the share_url as well.",
       inputSchema: {
         description: z
           .string()
@@ -116,7 +116,7 @@ export function createCogniflowServer(): McpServer {
     {
       title: "Render an existing CogniFlow graph",
       description:
-        "Render a CogniFlow AIR graph (as returned by cogniflow_compile_architecture, possibly after you edited nodes/edges) into any of: 'air' JSON, 'mermaid', 'drawio' XML, 'svg' (static) or 'svg_animated' (SMIL data-flow animation), and mint a fresh share_url. Use this after modifying a compiled graph rather than re-describing it.",
+        "Render a CogniFlow AIR graph (as returned by cogniflow_compile_architecture, possibly after you edited nodes/edges) into any of: 'air' JSON, 'mermaid', 'drawio' XML, 'svg' (static) or 'svg_animated' (SMIL data-flow animation that plays in any browser — use this instead of hand-writing animated SVG), and mint a fresh share_url. Use this after modifying a compiled graph rather than re-describing it.",
       inputSchema: {
         graph: z
           .record(z.unknown())
