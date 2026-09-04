@@ -141,19 +141,28 @@ claude mcp add cogniflow -- bun run <repo>/mcp/server.ts   # Claude Code
 { "mcpServers": { "cogniflow": { "command": "bun", "args": ["run", "<repo>/mcp/server.ts"] } } }
 ```
 
-**Remote (streamable HTTP) — claude.ai / Claude mobile custom connector.**
-claude.ai connectors need a public HTTPS URL, so run `mcp/http-server.ts` on any
-host that runs bun and terminates TLS (small VM behind Caddy/nginx, Render, Fly.io,
-Railway — GitHub Pages can't host it, it's static-only):
+**Remote — claude.ai / Claude mobile custom connector.** claude.ai connectors
+need a public HTTPS URL. The easiest personal setup is the Cloudflare Workers
+entry (`mcp/worker.ts`, free tier is plenty — the tools are pure CPU):
 
 ```sh
-COGNIFLOW_MCP_TOKEN=<secret> bun run mcp/http-server.ts   # listens on :8788 at POST /mcp
-# then: claude.ai → Settings → Connectors → Add custom connector → https://<your-host>/mcp
+cd mcp && bun install
+bunx wrangler login                            # once, free Cloudflare account
+bunx wrangler deploy                           # → https://cogniflow-mcp.<you>.workers.dev
+bunx wrangler secret put COGNIFLOW_MCP_KEY     # recommended: any long random string
+# then: claude.ai → Settings → Connectors → Add custom connector →
+#   https://cogniflow-mcp.<you>.workers.dev/mcp/<your key>
 ```
 
-It's stateless (fresh server per request, no session affinity) so it scales
-horizontally; `COGNIFLOW_MCP_TOKEN` enables bearer auth, `COGNIFLOW_SITE_URL`
-overrides the share-link origin, and `GET /healthz` is a probe endpoint.
+claude.ai custom connectors can't send custom headers, so the key rides in the
+path (`/mcp/<key>`, an unguessable capability URL); API/SDK clients may send
+`Authorization: Bearer <key>` instead. Prefer your own server? `mcp/http-server.ts`
+is the same thing for any bun-capable host behind TLS (Caddy/nginx, Render,
+Fly.io — GitHub Pages can't host it, it's static-only):
+`COGNIFLOW_MCP_TOKEN=<secret> bun run mcp/http-server.ts` (port 8788, `POST /mcp`,
+same path-or-bearer auth, `GET /healthz` probe). Both are stateless — a fresh
+server per request — so they scale horizontally; `COGNIFLOW_SITE_URL` overrides
+the share-link origin.
 
 Share links encode the whole graph (deflate + base64url) in the URL — nothing is
 uploaded anywhere; `src/lib/studio/headless.ts` exposes the same compile/export

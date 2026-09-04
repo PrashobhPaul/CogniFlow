@@ -81,15 +81,18 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
     return;
   }
 
-  if (url.pathname !== "/mcp") {
+  const match = /^\/mcp(?:\/(.+))?$/.exec(url.pathname);
+  if (!match) {
     deny(res, 404, "Not found. The MCP endpoint is POST /mcp.");
     return;
   }
 
   if (TOKEN) {
+    // claude.ai custom connectors can't send custom headers, so the token may
+    // ride in the path (/mcp/<token>) as well as in an Authorization header.
     const auth = req.headers.authorization ?? "";
-    if (auth !== `Bearer ${TOKEN}`) {
-      deny(res, 401, "Unauthorized: missing or invalid bearer token.");
+    if (match[1] !== TOKEN && auth !== `Bearer ${TOKEN}`) {
+      deny(res, 401, "Unauthorized: use /mcp/<token> or a bearer token.");
       return;
     }
   }
