@@ -1,0 +1,11 @@
+# Cloudflare Workers config for the CogniFlow MCP server (see worker.ts).
+#   bunx wrangler deploy            # from mcp/
+#   bunx wrangler secret put COGNIFLOW_MCP_KEY
+name = "cogniflow-mcp"
+main = "worker.ts"
+compatibility_date = "2026-08-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Uncomment to point share links somewhere other than the default site:
+# [vars]
+# COGNIFLOW_SITE_URL = "https://cogniflow.prashobhpaul.com"

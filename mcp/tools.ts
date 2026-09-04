@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { deflateRawSync } from "node:zlib";
 import { z } from "zod";
 import { airGraphSchema, type AirGraph } from "../src/lib/studio/air";
+import { encodeShareGraph } from "../src/lib/studio/share";
 import {
   compile,
   exportGraph,
@@ -20,14 +20,17 @@ import { PALETTE } from "../src/lib/studio/palette";
  * same code the studio ships.
  */
 
-const SITE = process.env["COGNIFLOW_SITE_URL"] ?? "https://cogniflow.prashobhpaul.com";
+let SITE =
+  (typeof process !== "undefined" ? process.env["COGNIFLOW_SITE_URL"] : undefined) ??
+  "https://cogniflow.prashobhpaul.com";
 
-const b64url = (buf: Buffer): string =>
-  buf.toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+/** Runtimes without process.env (Cloudflare Workers) configure the origin here. */
+export function setSiteUrl(url: string): void {
+  SITE = url;
+}
 
-function shareUrl(graph: AirGraph, title?: string): string {
-  const payload = JSON.stringify({ t: title, g: graph });
-  return `${SITE}/studio?d=${b64url(deflateRawSync(Buffer.from(payload, "utf8")))}`;
+async function shareUrl(graph: AirGraph, title?: string): Promise<string> {
+  return `${SITE}/studio?d=${await encodeShareGraph(graph, title)}`;
 }
 
 /** Compact, token-cheap summary an LLM can quote directly. */
@@ -97,7 +100,7 @@ export function createCogniflowServer(): McpServer {
       const output = {
         ...summarize(res),
         ...(name !== undefined ? { title: name } : {}),
-        share_url: shareUrl(res.graph, name),
+        share_url: await shareUrl(res.graph, name),
         graph: res.graph,
         ...(formats.length ? { renderings: renderFormats(res.graph, formats, name) } : {}),
       };
@@ -135,7 +138,7 @@ export function createCogniflowServer(): McpServer {
         );
       }
       const output = {
-        share_url: shareUrl(parsed.data, title),
+        share_url: await shareUrl(parsed.data, title),
         node_count: parsed.data.nodes.length,
         edge_count: parsed.data.edges.length,
         renderings: renderFormats(parsed.data, formats.length ? formats : ["mermaid"], title),
@@ -204,7 +207,7 @@ export function createCogniflowServer(): McpServer {
         id: pattern.id,
         name: pattern.name,
         description: pattern.description,
-        share_url: shareUrl(pattern.graph, pattern.name),
+        share_url: await shareUrl(pattern.graph, pattern.name),
         graph: pattern.graph,
         ...(formats.length
           ? { renderings: renderFormats(pattern.graph, formats, pattern.name) }

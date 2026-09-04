@@ -1,5 +1,5 @@
 {
   "extends": "../tsconfig.json",
   "compilerOptions": { "noEmit": true, "types": ["node"] },
-  "include": ["server.ts", "http-server.ts", "tools.ts"]
+  "include": ["server.ts", "http-server.ts", "worker.ts", "tools.ts"]
 }
