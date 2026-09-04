@@ -79,7 +79,7 @@ export function createCogniflowServer(): McpServer {
           .max(20000)
           .optional()
           .describe(
-            "Plain-language description. Arrows (->, →), verbs (calls, streams to, publishes to, retrieves from, writes to, retries against), containment ('an app with Postgres and Redis') and fronting ('app behind a WAF') are all understood.",
+            "Plain-language description. Arrows (->, →), verbs (calls, streams to, publishes to, retrieves from, writes to, retries against), containment ('an app with Postgres and Redis') and fronting ('app behind a WAF') are all understood. Label a connector with a trailing colon: 'gateway -> llm : stream'. Group components into titled lanes/swimlanes with markdown headers — a line like '# Content Pipeline' starts a lane and every component named until the next '# ...' header joins it (great for layered/tiered architectures like the reference boxes in a hand-drawn diagram).",
           ),
         mermaid: z
           .string()

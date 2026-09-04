@@ -26,6 +26,45 @@ describe("rule compiler", () => {
       expect(validateGraph(p.graph).filter((i) => i.level === "error")).toHaveLength(0);
     }
   });
+
+  test("a trailing ': label' on an arrow labels the connector, not the node", () => {
+    const res = compile({ text: "ingestion pipeline -> vector index : vectors" });
+    // The label must not fuse into the target's name.
+    expect(res.graph.nodes.some((n) => /vectors/i.test(n.label))).toBe(false);
+    expect(res.graph.nodes.some((n) => /^vector index$/i.test(n.label))).toBe(true);
+    expect(res.graph.edges[0]!.label).toBe("vectors");
+  });
+
+  test("'# Lane' headers group the nodes that follow into stacked, non-overlapping lanes", () => {
+    const res = compile({
+      text: `Pipeline:
+# Content Pipeline
+Nova QMS -> Intake -> Bedrock KB Sync
+# Grounded Answering
+Retrieve -> Generate
+Bedrock KB Sync -> Retrieve : vectors`,
+    });
+    expect(res.warnings).toHaveLength(0);
+    expect(res.graph.groups?.map((g) => g.label).sort()).toEqual([
+      "Content Pipeline",
+      "Grounded Answering",
+    ]);
+    // Every declared node carries its lane id.
+    const kb = res.graph.nodes.find((n) => /bedrock kb sync/i.test(n.label))!;
+    const retrieve = res.graph.nodes.find((n) => /^retrieve$/i.test(n.label))!;
+    expect(kb.group_id).toBe("content_pipeline");
+    expect(retrieve.group_id).toBe("grounded_answering");
+    // Lanes are stacked: the answering lane sits entirely below the pipeline lane.
+    const laneY = (id: string) =>
+      res.graph.nodes.filter((n) => n.group_id === id).map((n) => n.position.y);
+    expect(Math.min(...laneY("grounded_answering"))).toBeGreaterThan(
+      Math.max(...laneY("content_pipeline")),
+    );
+    // And the lanes render as titled containers.
+    const svg = exportGraph(res.graph, "svg_animated");
+    expect(svg).toContain("CONTENT PIPELINE");
+    expect(svg).toContain("GROUNDED ANSWERING");
+  });
 });
 
 describe("mermaid", () => {
