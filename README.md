@@ -132,15 +132,33 @@ the cost of a ~50-token description instead of generating SVG token by token:
 - `cogniflow_list_patterns` / `cogniflow_get_pattern` — reference architectures
 - `cogniflow_list_components` — the classification vocabulary
 
+**Local (stdio) — Claude Code / Claude Desktop.** Runs on your machine, zero hosting:
+
 ```sh
-cd mcp && bun install       # once
-# Claude Desktop / Claude Code config (see mcp/claude-config.example.json):
+cd mcp && bun install                                   # once
+claude mcp add cogniflow -- bun run <repo>/mcp/server.ts   # Claude Code
+# Claude Desktop: add to claude_desktop_config.json (see mcp/claude-config.example.json):
 { "mcpServers": { "cogniflow": { "command": "bun", "args": ["run", "<repo>/mcp/server.ts"] } } }
 ```
 
+**Remote (streamable HTTP) — claude.ai / Claude mobile custom connector.**
+claude.ai connectors need a public HTTPS URL, so run `mcp/http-server.ts` on any
+host that runs bun and terminates TLS (small VM behind Caddy/nginx, Render, Fly.io,
+Railway — GitHub Pages can't host it, it's static-only):
+
+```sh
+COGNIFLOW_MCP_TOKEN=<secret> bun run mcp/http-server.ts   # listens on :8788 at POST /mcp
+# then: claude.ai → Settings → Connectors → Add custom connector → https://<your-host>/mcp
+```
+
+It's stateless (fresh server per request, no session affinity) so it scales
+horizontally; `COGNIFLOW_MCP_TOKEN` enables bearer auth, `COGNIFLOW_SITE_URL`
+overrides the share-link origin, and `GET /healthz` is a probe endpoint.
+
 Share links encode the whole graph (deflate + base64url) in the URL — nothing is
 uploaded anywhere; `src/lib/studio/headless.ts` exposes the same compile/export
-API for scripts and tests (`bun test tests/`).
+API for scripts and tests (`bun test tests/`). `scripts/bench-headless.ts` and
+`scripts/bench-mcp.ts` reproduce the pipeline and server load benchmarks.
 
 ## The AI engines
 
