@@ -6,7 +6,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "bun run server.ts"
+    "start": "bun run server.ts",
+    "start:http": "bun run http-server.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.0",
