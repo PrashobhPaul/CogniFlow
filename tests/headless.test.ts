@@ -161,4 +161,66 @@ describe("review regression fixes", () => {
     const g = candidateToGraph(cand);
     expect(validateGraph(g.graph).filter((i) => i.level === "error")).toHaveLength(0);
   });
+
+  test("group lanes and node detail lines render into the exported SVG", () => {
+    const graph = {
+      air_version: 1 as const,
+      groups: [
+        { id: "ingest", label: "Content Pipeline", color: "#E8892B" },
+        { id: "answer", label: "Grounded Answering" },
+      ],
+      nodes: [
+        {
+          id: "kb",
+          label: "Bedrock KB Sync",
+          component_type: "vectordb",
+          category: "data",
+          icon: "vectordb",
+          position: { x: 0, y: 0 },
+          group_id: "ingest",
+          details: ["Titan Embeddings V2", "incremental sync"],
+        },
+        {
+          id: "retrieve",
+          label: "Retrieve",
+          component_type: "search",
+          category: "data",
+          icon: "search",
+          position: { x: 360, y: 0 },
+          group_id: "answer",
+          details: ["hybrid search"],
+        },
+      ],
+      edges: [
+        {
+          id: "e1",
+          source_node_id: "kb",
+          target_node_id: "retrieve",
+          direction: "forward" as const,
+          semantic_type: "retrieval" as const,
+          protocol: "gRPC",
+          execution_mode: "synchronous" as const,
+        },
+      ],
+      motion: [
+        {
+          edge_id: "e1",
+          grammar: "stream" as const,
+          speed: 1.6,
+          density: 9,
+          size: 2.6,
+          enabled: true,
+        },
+      ],
+    };
+    // Valid AIR (groups + details are accepted by the schema).
+    expect(validateGraph(graph).filter((i) => i.level === "error")).toHaveLength(0);
+    const svg = exportGraph(graph, "svg_animated");
+    // Both lane titles are drawn (uppercased), a themed default colour is used
+    // for the group that declared none, and a detail line reaches the output.
+    expect(svg).toContain("CONTENT PIPELINE");
+    expect(svg).toContain("GROUNDED ANSWERING");
+    expect(svg).toContain("#E8892B");
+    expect(svg).toContain("Titan Embeddings V2");
+  });
 });

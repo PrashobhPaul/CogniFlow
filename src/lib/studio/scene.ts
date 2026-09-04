@@ -41,6 +41,21 @@ export const NODE = {
   radius: 12,
 } as const;
 
+// Body-line ("details") metrics for container nodes.
+export const DETAIL = {
+  size: 11,
+  lh: 16,
+  gapTop: 4,
+} as const;
+
+// Group/lane container metrics.
+export const GROUP = {
+  pad: 22,
+  header: 34,
+  radius: 14,
+  titleSize: 13,
+} as const;
+
 // `.edge-chip` metrics.
 export const CHIP = {
   padX: 6,
@@ -54,6 +69,16 @@ export const CHIP = {
 
 export const TITLE_BAND_H = 64;
 export const LEGEND_BAND_H = 40;
+
+/** Default lane accents, cycled when a group declares no colour. */
+export const GROUP_PALETTE = [
+  "#2563EB",
+  "#14A38B",
+  "#7C3AED",
+  "#E8892B",
+  "#2E7D32",
+  "#C2185B",
+] as const;
 
 export interface SceneOptions {
   theme?: ExportThemeId;
@@ -78,6 +103,7 @@ export interface SceneNode {
   h: number;
   label: string;
   subtitle: string | undefined;
+  details: string[];
   icon: string;
   category: NodeCategory;
   accent: string;
@@ -111,10 +137,21 @@ export interface SceneEdge {
   step: number | null;
 }
 
+export interface SceneGroup {
+  id: string;
+  label: string;
+  color: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
 export interface Scene {
   width: number;
   height: number;
   theme: ExportTheme;
+  groups: SceneGroup[];
   nodes: SceneNode[];
   edges: SceneEdge[];
   steps: StoryStep[];
@@ -154,22 +191,39 @@ export function subFont() {
 export function chipFont(mono: boolean) {
   return `${CHIP.fontSize}px ${mono ? FONT_MONO : FONT_SANS}`;
 }
+export function detailFont() {
+  return `${DETAIL.size}px ${FONT_SANS}`;
+}
+
+/** Total height a node's text block needs for label + subtitle + detail lines. */
+export function textBlockHeight(
+  subtitle: string | undefined,
+  details: string[] | undefined,
+): number {
+  return (
+    NODE.labelLH +
+    (subtitle ? NODE.subLH : 0) +
+    (details && details.length ? DETAIL.gapTop + details.length * DETAIL.lh : 0)
+  );
+}
 
 /** Same size the DOM would give `.arch-node` for this content. */
 export function estimateNodeSize(
   label: string,
   subtitle: string | undefined,
+  details?: string[],
 ): { w: number; h: number } {
   const labelW = measureText(label, labelFont());
   const subW = subtitle
     ? measureText(subtitle.toUpperCase(), subFont()) + subtitle.length * NODE.subTracking
     : 0;
-  const textW = Math.max(labelW, subW);
+  const detailW = (details ?? []).reduce((m, d) => Math.max(m, measureText(d, detailFont())), 0);
+  const textW = Math.max(labelW, subW, detailW);
   const w = Math.max(
     NODE.minW,
     Math.ceil(NODE.borderL + NODE.padX + NODE.iconBox + NODE.gap + textW + NODE.padX + NODE.border),
   );
-  const textH = NODE.labelLH + (subtitle ? NODE.subLH : 0);
+  const textH = textBlockHeight(subtitle, details);
   const h = NODE.border * 2 + NODE.padY * 2 + Math.max(NODE.iconBox, textH);
   return { w, h };
 }
@@ -205,10 +259,38 @@ export function buildScene(graph: AirGraph, opts: SceneOptions = {}): Scene {
     const size =
       m && m.width > 0 && m.height > 0
         ? { w: m.width, h: m.height }
-        : estimateNodeSize(n.label, n.subtitle);
+        : estimateNodeSize(n.label, n.subtitle, n.details);
     return { n, x: n.position.x, y: n.position.y, ...size };
   });
   const byId = new Map(rawNodes.map((r) => [r.n.id, r]));
+
+  // 1b. Group/lane boxes: bound the members of each declared group in graph space.
+  const rawGroups = (graph.groups ?? [])
+    .map((g, i) => {
+      const members = rawNodes.filter((r) => r.n.group_id === g.id);
+      if (members.length === 0) return null;
+      let gx1 = Infinity;
+      let gy1 = Infinity;
+      let gx2 = -Infinity;
+      let gy2 = -Infinity;
+      for (const r of members) {
+        gx1 = Math.min(gx1, r.x);
+        gy1 = Math.min(gy1, r.y);
+        gx2 = Math.max(gx2, r.x + r.w);
+        gy2 = Math.max(gy2, r.y + r.h);
+      }
+      const color = g.color ?? GROUP_PALETTE[i % GROUP_PALETTE.length]!;
+      return {
+        id: g.id,
+        label: g.label,
+        color,
+        x: gx1 - GROUP.pad,
+        y: gy1 - GROUP.pad - GROUP.header,
+        w: gx2 - gx1 + GROUP.pad * 2,
+        h: gy2 - gy1 + GROUP.pad * 2 + GROUP.header,
+      };
+    })
+    .filter((g): g is NonNullable<typeof g> => g !== null);
 
   // 2. Edge paths (React Flow smoothstep, right handle → left handle).
   const motionById = new Map(graph.motion.map((m) => [m.edge_id, m]));
@@ -267,6 +349,7 @@ export function buildScene(graph: AirGraph, opts: SceneOptions = {}): Scene {
     maxX = Math.max(maxX, x2);
     maxY = Math.max(maxY, y2);
   };
+  for (const g of rawGroups) grow(g.x, g.y, g.x + g.w, g.y + g.h);
   for (const r of rawNodes) grow(r.x, r.y, r.x + r.w, r.y + r.h);
   for (const r of rawEdges) {
     if (r.chip) grow(r.chip.x - 14, r.chip.y, r.chip.x + r.chip.w, r.chip.y + r.chip.h);
@@ -325,6 +408,7 @@ export function buildScene(graph: AirGraph, opts: SceneOptions = {}): Scene {
       h: r.h,
       label: r.n.label,
       subtitle: r.n.subtitle,
+      details: r.n.details ?? [],
       icon: r.n.icon,
       category,
       accent,
@@ -364,10 +448,17 @@ export function buildScene(graph: AirGraph, opts: SceneOptions = {}): Scene {
     };
   });
 
+  const groups: SceneGroup[] = rawGroups.map((g) => ({
+    ...g,
+    x: g.x + offX,
+    y: g.y + offY,
+  }));
+
   return {
     width,
     height,
     theme,
+    groups,
     nodes,
     edges,
     steps: story,
