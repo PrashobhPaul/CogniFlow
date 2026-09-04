@@ -28,7 +28,7 @@ const manifest = {
   manifest_version: "0.2",
   name: "cogniflow",
   display_name: "CogniFlow",
-  version: "1.0.0",
+  version: "1.0.1",
   description:
     "Turn plain-language architecture descriptions into animated, editable diagrams with share links.",
   long_description:
@@ -57,4 +57,8 @@ writeFileSync(resolve(stage, "manifest.json"), JSON.stringify(manifest, null, 2)
 
 execSync(`cd ${stage} && zip -qr ../cogniflow.mcpb .`, { stdio: "inherit" });
 execSync(`ls -la ${out}/cogniflow.mcpb`, { stdio: "inherit" });
-console.log("Done: dist-mcpb/cogniflow.mcpb — double-click to install in Claude Desktop.");
+// The committed copy: downloadable from the GitHub repo and served on the site.
+cpSync(resolve(out, "cogniflow.mcpb"), resolve(root, "public/cogniflow.mcpb"));
+console.log(
+  "Done: dist-mcpb/cogniflow.mcpb (also copied to public/cogniflow.mcpb) — double-click to install in Claude Desktop.",
+);

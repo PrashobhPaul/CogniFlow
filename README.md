@@ -132,14 +132,13 @@ the cost of a ~50-token description instead of generating SVG token by token:
 - `cogniflow_list_patterns` / `cogniflow_get_pattern` — reference architectures
 - `cogniflow_list_components` — the classification vocabulary
 
-**Claude Desktop — one file, double-click install.** Build the Desktop Extension
-and install it (no bun, no hosting, no config editing — Claude Desktop runs it
-on its own bundled Node):
-
-```sh
-bun run scripts/build-mcpb.mjs        # → dist-mcpb/cogniflow.mcpb
-# double-click cogniflow.mcpb, or Claude Desktop → Settings → Extensions → Install extension
-```
+**Claude Desktop — one file, double-click install.**
+[**⬇ Download cogniflow.mcpb**](https://github.com/PrashobhPaul/CogniFlow/raw/main/public/cogniflow.mcpb)
+(or grab it from [Releases](https://github.com/PrashobhPaul/CogniFlow/releases), or
+from the footer of [the app](https://cogniflow.prashobhpaul.com)), then double-click
+it — or Claude Desktop → Settings → Extensions → Install extension. No bun, no
+hosting, no config editing: Claude Desktop runs it on its own bundled Node.
+Rebuild from source with `bun run scripts/build-mcpb.mjs`.
 
 **Local (stdio) — Claude Code / Claude Desktop.** Runs on your machine, zero hosting:
 

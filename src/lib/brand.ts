@@ -8,6 +8,11 @@ export const BRAND = {
   description:
     "Free, open-source studio for animated software architecture diagrams: design components, watch real data flow move between them, export GIF, video and slides — all in the browser.",
   author: "Prashobh Paul",
+  authorUrl: "https://github.com/PrashobhPaul",
+  /** Corner credit stamped on exported diagrams (user-toggleable in Export). */
+  exportCredit: "CogniFlow · Prashobh Paul",
+  /** Claude Desktop extension, served from the site and the repo. */
+  mcpbPath: "cogniflow.mcpb",
   repoUrl: "https://github.com/PrashobhPaul/CogniFlow",
   repoLabel: "github.com/PrashobhPaul/CogniFlow",
   siteUrl: "https://cogniflow.prashobhpaul.com",
