@@ -220,7 +220,12 @@ export function clearDraft(projectId: string | null) {
   writeDrafts(drafts);
 }
 
+/** Slot for a shared-link session, kept apart so it never clobbers unsaved work. */
+export const SHARED_DRAFT_ID = "shared";
+
 /** Project ids that currently have unsaved drafts (for the projects page badge). */
 export function draftProjectIds(): Set<string> {
-  return new Set(Object.keys(readDrafts()).filter((k) => k !== UNSAVED_DRAFT_ID));
+  return new Set(
+    Object.keys(readDrafts()).filter((k) => k !== UNSAVED_DRAFT_ID && k !== SHARED_DRAFT_ID),
+  );
 }

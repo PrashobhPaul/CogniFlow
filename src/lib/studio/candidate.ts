@@ -76,7 +76,8 @@ const CATEGORIES: NodeCategory[] = [
   "devops",
 ];
 
-const slug = (v: string) =>
+/** Canonical id slug shared with importers so external ids map predictably. */
+export const slug = (v: string) =>
   v
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "_")

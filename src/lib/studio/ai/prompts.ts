@@ -96,10 +96,10 @@ export function parseDsl(raw: string): Candidate {
     }
     const n = line.match(DSL_NODE_RE);
     if (n && !line.includes("->")) {
-      const id = n[1]!.toLowerCase();
+      const id = n[1]!.toLowerCase().slice(0, 64);
       nodes.set(id, {
         id,
-        label: n[2]!.trim().slice(0, 80),
+        label: n[2]!.trim().slice(0, 80) || id,
         ...(n[3] ? { component_type: n[3]!.trim().toLowerCase().slice(0, 40) } : {}),
       });
       continue;
@@ -107,11 +107,11 @@ export function parseDsl(raw: string): Candidate {
     const e = line.match(DSL_EDGE_RE);
     if (e) {
       const [label, semantic, protocol] = (e[3] ?? "").split("|").map((p) => p.trim());
-      const source = e[1]!.toLowerCase();
-      const target = e[2]!.toLowerCase();
+      const source = e[1]!.toLowerCase().slice(0, 64);
+      const target = e[2]!.toLowerCase().slice(0, 64);
       // The model may reference nodes it never declared; declare them implicitly.
       for (const id of [source, target])
-        if (!nodes.has(id)) nodes.set(id, { id, label: id.replace(/_/g, " ") });
+        if (!nodes.has(id)) nodes.set(id, { id, label: id.replace(/_/g, " ").slice(0, 80) || id });
       const semanticOk = semantic && (SEMANTICS as readonly string[]).includes(semantic);
       edges.push({
         source_node_id: source,
@@ -141,7 +141,6 @@ export function parseDsl(raw: string): Candidate {
  */
 export function repairJson(fragment: string): string {
   let text = fragment;
-  const stack: string[] = [];
   let inString = false;
   for (let i = 0; i < text.length; i++) {
     const ch = text[i];
@@ -151,14 +150,26 @@ export function repairJson(fragment: string): string {
       continue;
     }
     if (ch === '"') inString = true;
-    else if (ch === "{" || ch === "[") stack.push(ch);
-    else if (ch === "}" || ch === "]") stack.pop();
   }
   if (inString) text += '"';
-  // Drop a dangling partial element after the last complete value.
+  // Drop a dangling partial element after the last complete value…
   text = text.replace(/,\s*(?:"[^"]*"?\s*:?\s*[^,\]}]*)?$/s, "");
-  while (stack.length) {
-    const open = stack.pop();
+  // …then RECOUNT the open brackets: the strip may have removed some.
+  const stack2: string[] = [];
+  let inStr2 = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inStr2) {
+      if (ch === "\\") i++;
+      else if (ch === '"') inStr2 = false;
+      continue;
+    }
+    if (ch === '"') inStr2 = true;
+    else if (ch === "{" || ch === "[") stack2.push(ch);
+    else if (ch === "}" || ch === "]") stack2.pop();
+  }
+  while (stack2.length) {
+    const open = stack2.pop();
     text += open === "{" ? "}" : "]";
   }
   return text;

@@ -94,3 +94,71 @@ describe("small-model output handling", () => {
     expect(repairJson('{"a":[1,{"b":"c')).toBe('{"a":[1,{"b":"c"}]}');
   });
 });
+
+describe("review regression fixes", () => {
+  test("mermaid: ids that change under slugging keep their subgraph", () => {
+    const res = importMermaid(`flowchart LR
+  subgraph Zone-1 [Edge Zone]
+    Svc-A[Service A]
+  end
+  Svc-A --> DB[(Store)]`);
+    const svc = res.graph.nodes.find((n) => n.label === "Service A")!;
+    expect(svc.group_id).toBe("Zone-1");
+  });
+
+  test("mermaid: '&' inside a bracket label is not a fan-out", () => {
+    const res = importMermaid(`flowchart LR
+  a["Fish & Chips"] --> b[Out]
+  c[C] & d[D] --> e[E]`);
+    expect(res.graph.nodes.find((n) => n.id === "a")!.label).toBe("Fish & Chips");
+    expect(res.graph.edges.length).toBe(3);
+  });
+
+  test("mermaid: semicolon-terminated lines import normally", () => {
+    const res = importMermaid("flowchart LR;\n  a[A] --> b[B];\n  b --> c[C];");
+    expect(res.graph.edges.length).toBe(2);
+  });
+
+  test("mermaid: quoted subgraph titles keep the group stack balanced", () => {
+    const res = importMermaid(`flowchart LR
+  subgraph "Retrieval Zone"
+    a[A]
+  end
+  subgraph g2 [Second]
+    b[B]
+  end
+  a --> b`);
+    expect(res.graph.nodes.find((n) => n.id === "a")!.group_id).toBe("group_1");
+    expect(res.graph.nodes.find((n) => n.id === "b")!.group_id).toBe("g2");
+  });
+
+  test("mermaid: a node referenced before its subgraph declaration joins the group", () => {
+    const res = importMermaid(`flowchart LR
+  x --> y
+  subgraph g [G]
+    y[Why]
+  end`);
+    expect(res.graph.nodes.find((n) => n.id === "y")!.group_id).toBe("g");
+  });
+
+  test("mermaid: exported labels with pipes and dashes re-import cleanly", () => {
+    const first = importMermaid(`flowchart LR
+  a["left | right -- mid"] --> b[B]`);
+    const round = importMermaid(exportMermaid(first.graph));
+    expect(round.graph.nodes.length).toBe(2);
+    expect(round.graph.edges.length).toBe(1);
+  });
+
+  test("repairJson recounts brackets after stripping a partial element", () => {
+    const fixed = extractJson('{"nodes":[{"id":"a"},{"id":"b","label"') as { nodes: unknown[] };
+    expect(fixed.nodes).toHaveLength(2);
+  });
+
+  test("parseDsl caps overlong ids to the candidate schema limit", () => {
+    const longId = "x".repeat(100);
+    const cand = parseDsl(`${longId} = Big [web]\n${longId} -> llm : p | request | REST`);
+    for (const n of cand.nodes) expect(n.id.length).toBeLessThanOrEqual(64);
+    const g = candidateToGraph(cand);
+    expect(validateGraph(g.graph).filter((i) => i.level === "error")).toHaveLength(0);
+  });
+});

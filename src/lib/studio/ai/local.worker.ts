@@ -336,6 +336,18 @@ function loadVision(modelId: string, device: "webgpu" | "wasm") {
 /** Lets a 'cancel' message stop the current generation at the next step. */
 const interrupter = new InterruptableStoppingCriteria();
 
+/**
+ * Generations (and warm-ups) run one at a time: a decoder session's KV cache
+ * is not reentrant, and the shared interrupter must belong to exactly one
+ * generation. Cancelling interrupts the running one; queued ones then run.
+ */
+let generateChain: Promise<unknown> = Promise.resolve();
+function serialize<T>(run: () => Promise<T>): Promise<T> {
+  const next = generateChain.then(run, run);
+  generateChain = next.catch(() => undefined);
+  return next;
+}
+
 async function generateText(msg: GenerateMsg): Promise<string> {
   const device = await resolveDevice(msg.device);
   const { tokenizer, model } = await loadText(msg.modelId, device);
@@ -389,10 +401,12 @@ async function generateVision(msg: GenerateMsg): Promise<string> {
   // Dense diagrams need the tiled encoding; small images stay single-pass.
   const split = Math.max(image.width, image.height) > 768;
   const inputs: any = await processor(text, [image], { do_image_splitting: split } as any);
+  interrupter.reset();
   const output: any = await model.generate({
     ...inputs,
     max_new_tokens: msg.maxNewTokens,
     do_sample: false,
+    stopping_criteria: interrupter,
   });
   const promptLen = inputs.input_ids.dims.at(-1);
   const decoded = processor.batch_decode(output.slice(null, [promptLen, null]), {
@@ -464,23 +478,27 @@ self.onmessage = async (event: MessageEvent<InMsg>) => {
       if (msg.kind === "text") {
         const { tokenizer, model } = await loadText(msg.modelId, device);
         // 1-token warm generate so WebGPU shader compilation is paid here,
-        // not on the user's first real compile.
-        try {
-          const warm: any = tokenizer.apply_chat_template([{ role: "user", content: "hi" }], {
-            add_generation_prompt: true,
-            return_dict: true,
-          } as any);
-          await model.generate({ ...warm, max_new_tokens: 1, do_sample: false });
-        } catch {
-          /* warm-up is best-effort */
-        }
+        // not on the user's first real compile. Serialised like any generation.
+        await serialize(async () => {
+          try {
+            const warm: any = tokenizer.apply_chat_template([{ role: "user", content: "hi" }], {
+              add_generation_prompt: true,
+              return_dict: true,
+            } as any);
+            await model.generate({ ...warm, max_new_tokens: 1, do_sample: false });
+          } catch {
+            /* warm-up is best-effort */
+          }
+        });
       } else await loadVision(msg.modelId, device);
       self.postMessage({ type: "loaded", kind: msg.kind, modelId: msg.modelId, device });
     } else if (msg.type === "cancel") {
       interrupter.interrupt();
     } else if (msg.type === "generate") {
       const device = await resolveDevice(msg.device);
-      const text = msg.kind === "vision" ? await generateVision(msg) : await generateText(msg);
+      const text = await serialize(() =>
+        msg.kind === "vision" ? generateVision(msg) : generateText(msg),
+      );
       self.postMessage({ type: "result", id: msg.id, text, device });
     } else if (msg.type === "unload") {
       for (const p of loaded.values()) {

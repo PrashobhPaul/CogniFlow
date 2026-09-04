@@ -12,7 +12,14 @@ import { validateGraph } from "./air";
 import { fromAir, toAir } from "./adapter";
 import { autoLayout } from "./layout";
 import type { ArchNode, FlowEdge } from "./store-types";
-import { createProject, getProject, renameProject, saveVersion, type SourceType } from "./projects";
+import {
+  createProject,
+  getProject,
+  renameProject,
+  saveVersion,
+  UNSAVED_DRAFT_ID,
+  type SourceType,
+} from "./projects";
 import {
   configureAutosave,
   discardAutosave,
@@ -41,6 +48,8 @@ interface StudioState {
   sourceType: SourceType;
   graphVersion: number;
   dirty: boolean;
+  /** Draft slot for sessions without a project id ('unsaved' or 'shared'). */
+  draftSlot: string;
   nodes: ArchNode[];
   edges: FlowEdge[];
   past: Snapshot[];
@@ -60,6 +69,10 @@ interface StudioState {
   updateEdgeData: (id: string, patch: Partial<FlowEdgeData>) => void;
   updateNodeData: (id: string, patch: Partial<ArchNodeData>) => void;
   deleteSelected: () => void;
+  /** Delete one specific element (Inspector), independent of canvas flags. */
+  deleteById: (nodeId: string | null, edgeId: string | null) => void;
+  /** Delete an explicit set in ONE history commit (React Flow delete-key path). */
+  deleteElements: (nodeIds: string[], edgeIds: string[]) => void;
   copySelection: () => number;
   pasteClipboard: () => number;
   duplicateSelection: () => number;
@@ -82,6 +95,8 @@ interface StudioState {
       graphVersion?: number;
       /** true when restoring an unsaved draft, so the * marker stays honest. */
       dirty?: boolean;
+      /** Draft slot for project-less sessions; defaults to the unsaved slot. */
+      draftSlot?: string;
     },
   ) => void;
   openProject: (projectId: string) => boolean;
@@ -125,6 +140,7 @@ export const useStudio = create<StudioState>((set, get) => ({
   sourceType: "blank",
   graphVersion: 1,
   dirty: false,
+  draftSlot: UNSAVED_DRAFT_ID,
   nodes: [],
   edges: [],
   past: [],
@@ -203,6 +219,30 @@ export const useStudio = create<StudioState>((set, get) => ({
     });
     set({ selectedNodeId: null, selectedEdgeId: null });
   },
+  deleteById: (nodeId, edgeId) => {
+    const s = get();
+    if (nodeId) {
+      commit(set, get, {
+        nodes: s.nodes.filter((n) => n.id !== nodeId),
+        edges: s.edges.filter((e) => e.source !== nodeId && e.target !== nodeId),
+      });
+      set({ selectedNodeId: null });
+    } else if (edgeId) {
+      commit(set, get, { edges: s.edges.filter((e) => e.id !== edgeId) });
+      set({ selectedEdgeId: null });
+    }
+  },
+  deleteElements: (nodeIds, edgeIds) => {
+    if (!nodeIds.length && !edgeIds.length) return;
+    const nset = new Set(nodeIds);
+    const eset = new Set(edgeIds);
+    const s = get();
+    commit(set, get, {
+      nodes: s.nodes.filter((n) => !nset.has(n.id)),
+      edges: s.edges.filter((e) => !eset.has(e.id) && !nset.has(e.source) && !nset.has(e.target)),
+    });
+    set({ selectedNodeId: null, selectedEdgeId: null });
+  },
   copySelection: () => {
     const s = get();
     const nodes = selectedNodesOf(s);
@@ -240,14 +280,17 @@ export const useStudio = create<StudioState>((set, get) => ({
     }));
     commit(set, get, {
       nodes: [...get().nodes.map((n) => (n.selected ? { ...n, selected: false } : n)), ...nodes],
-      edges: [...get().edges, ...edges],
+      edges: [...get().edges.map((e) => (e.selected ? { ...e, selected: false } : e)), ...edges],
     });
     set({ selectedNodeId: nodes.length === 1 ? nodes[0]!.id : null, selectedEdgeId: null });
     return nodes.length;
   },
   duplicateSelection: () => {
+    const kept = clipboard;
     const copied = get().copySelection();
-    return copied ? get().pasteClipboard() : 0;
+    const pasted = copied ? get().pasteClipboard() : 0;
+    clipboard = kept; // duplicating must not clobber what the user copied
+    return pasted;
   },
   selectAll: () => {
     set({
@@ -258,12 +301,15 @@ export const useStudio = create<StudioState>((set, get) => ({
     });
   },
   reconnect: (edgeId, connection) => {
+    const s = get();
+    const edge = s.edges.find((e) => e.id === edgeId);
+    if (!edge) return;
+    const source = connection.source ?? edge.source;
+    const target = connection.target ?? edge.target;
+    if (source === edge.source && target === edge.target) return; // dropped back in place
+    if (s.edges.some((e) => e.id !== edgeId && e.source === source && e.target === target)) return;
     commit(set, get, {
-      edges: get().edges.map((e) =>
-        e.id === edgeId
-          ? { ...e, source: connection.source ?? e.source, target: connection.target ?? e.target }
-          : e,
-      ),
+      edges: s.edges.map((e) => (e.id === edgeId ? { ...e, source, target } : e)),
     });
   },
   setPlaying: (playing) => set({ playing }),
@@ -321,6 +367,7 @@ export const useStudio = create<StudioState>((set, get) => ({
       past: [],
       future: [],
       dirty: meta.dirty ?? false,
+      draftSlot: meta.draftSlot ?? UNSAVED_DRAFT_ID,
       projectId: meta.projectId,
       projectName: meta.name,
       sourceType: meta.sourceType,
@@ -343,13 +390,13 @@ export const useStudio = create<StudioState>((set, get) => ({
   },
 
   saveProject: (note = "manual save") => {
-    const { projectId, projectName, sourceType } = get();
+    const { projectId, projectName, sourceType, draftSlot } = get();
     const graph = get().currentGraph();
     try {
       if (!projectId) {
         const created = createProject(projectName, sourceType, graph);
         set({ projectId: created.project_id, graphVersion: created.graph_version, dirty: false });
-        discardAutosave(null);
+        discardAutosave(draftSlot);
         return true;
       }
       const updated = saveVersion(projectId, graph, note);
@@ -358,7 +405,6 @@ export const useStudio = create<StudioState>((set, get) => ({
         const created = createProject(projectName, sourceType, graph);
         set({ projectId: created.project_id, graphVersion: created.graph_version, dirty: false });
         discardAutosave(projectId);
-        discardAutosave(null);
         return true;
       }
       renameProject(projectId, projectName);
@@ -382,12 +428,16 @@ configureAutosave(
   () => {
     const s = useStudio.getState();
     if (!s.dirty) return null;
+    const saved = s.projectId ? getProject(s.projectId) : undefined;
     return {
       projectId: s.projectId,
+      draftSlot: s.projectId ? null : s.draftSlot,
       name: s.projectName,
       sourceType: s.sourceType,
       baseGraphVersion: s.projectId ? s.graphVersion : 0,
       graph: toAir(s.nodes, s.edges),
+      savedHash: saved?.graph_hash ?? null,
+      savedName: saved?.name ?? null,
     };
   },
   (autosaveState, lastAutosaveAt) =>

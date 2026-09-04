@@ -1,5 +1,5 @@
 import type { AirGraph } from "./air";
-import { candidateToGraph, type Candidate, type CandidateResult } from "./candidate";
+import { candidateToGraph, slug, type Candidate, type CandidateResult } from "./candidate";
 import { guessSemantics } from "./classify";
 
 /**
@@ -66,6 +66,43 @@ export interface MermaidImportResult extends CandidateResult {
   title: string | undefined;
 }
 
+/**
+ * Quoted labels may contain edge-like text ("a | b", "x --> y"), so quoted
+ * spans are masked with placeholders before operator splitting and restored
+ * in each token afterwards.
+ */
+const MASK = "\u0001";
+function maskQuotes(line: string): { masked: string; spans: string[] } {
+  const spans: string[] = [];
+  const masked = line.replace(/"[^"]*"/g, (m) => {
+    spans.push(m);
+    return `${MASK}${spans.length - 1}${MASK}`;
+  });
+  return { masked, spans };
+}
+function unmask(text: string, spans: string[]): string {
+  return text.replace(new RegExp(`${MASK}(\\d+)${MASK}`, "g"), (_, i) => spans[Number(i)] ?? "");
+}
+
+/** Split "a & b" fan-out lists, but never inside [...] ( ... ) { ... } or quotes. */
+function splitFanout(text: string): string[] {
+  const out: string[] = [];
+  let depth = 0;
+  let quoted = false;
+  let cur = "";
+  for (const ch of text) {
+    if (ch === '"') quoted = !quoted;
+    else if (!quoted && "[({".includes(ch)) depth++;
+    else if (!quoted && "])}".includes(ch)) depth--;
+    if (ch === "&" && depth === 0 && !quoted) {
+      out.push(cur);
+      cur = "";
+    } else cur += ch;
+  }
+  out.push(cur);
+  return out;
+}
+
 // Edge operator: --> , --- , -.-> , ==> , <--> , --x etc., with optional |label|
 const EDGE_RE =
   /^(?<lhs>.+?)\s*(?<back><)?(?<line>-{2,3}|={2,3}|-\.+-?)\s*(?<head>>|x|o)?\s*(?:\|(?<label>[^|]*)\|)?\s*(?<rhs>.+)$/;
@@ -84,12 +121,17 @@ export function importMermaid(text: string): MermaidImportResult {
   const ensureNode = (token: string): string | null => {
     const parsed = parseNodeRef(token);
     if (!parsed) return null;
+    const currentGroup = groupStack[groupStack.length - 1] ?? null;
     const existing = nodes.get(parsed.id);
     if (!existing) {
-      nodes.set(parsed.id, { ...parsed, group: groupStack[groupStack.length - 1] ?? null });
-    } else if (existing.label === existing.id && parsed.label !== parsed.id) {
-      existing.label = parsed.label;
-      existing.shape = parsed.shape;
+      nodes.set(parsed.id, { ...parsed, group: currentGroup });
+    } else {
+      if (existing.label === existing.id && parsed.label !== parsed.id) {
+        existing.label = parsed.label;
+        existing.shape = parsed.shape;
+      }
+      // A node first seen as a bare reference joins the subgraph that later declares it.
+      if (existing.group === null && currentGroup) existing.group = currentGroup;
     }
     return parsed.id;
   };
@@ -97,7 +139,8 @@ export function importMermaid(text: string): MermaidImportResult {
   const lines = text.replace(/\r/g, "").split("\n");
   let inFrontmatter = false;
   for (const rawLine of lines) {
-    const line = rawLine.replace(/%%.*$/, "").trim();
+    // Official docs often terminate statements with ';' — strip it.
+    const line = rawLine.replace(/%%.*$/, "").trim().replace(/;+$/, "");
     if (!line) continue;
     if (line === "---") {
       inFrontmatter = !inFrontmatter;
@@ -114,11 +157,11 @@ export function importMermaid(text: string): MermaidImportResult {
       title = titleMatch[1]!.trim();
       continue;
     }
-    const sub = line.match(/^subgraph\s+([A-Za-z0-9_.-]+)?\s*(?:\[(.+)\])?\s*$/);
-    if (sub) {
+    const sub = line.match(/^subgraph\s+(?:([A-Za-z0-9_.-]+)\s*)?(?:\[(.+)\]|"(.+)")?\s*$/);
+    if (sub && (sub[1] || sub[2] || sub[3])) {
       const gid = sub[1] ?? `group_${groupTitles.size + 1}`;
       groupStack.push(gid);
-      groupTitles.set(gid, unquote(sub[2] ?? sub[1] ?? "Group"));
+      groupTitles.set(gid, unquote(sub[2] ?? sub[3] ?? sub[1] ?? "Group"));
       continue;
     }
     if (/^end$/i.test(line)) {
@@ -130,15 +173,16 @@ export function importMermaid(text: string): MermaidImportResult {
     }
 
     // Chained edges: A --> B --> C. Split on edge operators while keeping them.
-    const midLabel = line.match(EDGE_MID_LABEL_RE);
+    const { masked, spans } = maskQuotes(line);
+    const midLabel = masked.match(EDGE_MID_LABEL_RE);
     if (midLabel) {
-      const src = ensureNode(midLabel.groups!["lhs"]!);
-      const dst = ensureNode(midLabel.groups!["rhs"]!);
+      const src = ensureNode(unmask(midLabel.groups!["lhs"]!, spans));
+      const dst = ensureNode(unmask(midLabel.groups!["rhs"]!, spans));
       if (src && dst)
         edges.push({
           source: src,
           target: dst,
-          label: unquote(midLabel.groups!["label"]!),
+          label: unquote(unmask(midLabel.groups!["label"]!, spans)),
           bidirectional: false,
           dotted: false,
           thick: false,
@@ -147,16 +191,17 @@ export function importMermaid(text: string): MermaidImportResult {
       continue;
     }
 
-    if (EDGE_RE.test(line)) {
-      // Handle chains by splitting on the operators.
-      const segments = line.split(/\s*(<?(?:-{2,3}|={2,3}|-\.+-?)(?:>|x|o)?(?:\|[^|]*\|)?)\s*/);
+    if (EDGE_RE.test(masked)) {
+      // Handle chains by splitting on the operators (quotes are masked).
+      const segments = masked.split(/\s*(<?(?:-{2,3}|={2,3}|-\.+-?)(?:>|x|o)?(?:\|[^|]*\|)?)\s*/);
       // segments: [nodeA, op1, nodeB, op2, nodeC, ...]
       let ok = segments.length >= 3 && segments.length % 2 === 1;
       for (let i = 0; ok && i + 2 < segments.length + 1 && i + 1 < segments.length; i += 2) {
-        const lhsTokens = segments[i]!.split("&");
-        const rhsTokens = segments[i + 2]!.split("&");
+        const lhsTokens = splitFanout(segments[i]!).map((t) => unmask(t, spans));
+        const rhsTokens = splitFanout(segments[i + 2]!).map((t) => unmask(t, spans));
         const op = segments[i + 1]!;
-        const label = op.match(/\|([^|]*)\|/)?.[1];
+        const rawLabel = op.match(/\|([^|]*)\|/)?.[1];
+        const label = rawLabel !== undefined ? unmask(rawLabel, spans) : undefined;
         const bidirectional = op.startsWith("<");
         const dotted = /-\./.test(op);
         const thick = /=/.test(op);
@@ -219,8 +264,13 @@ export function importMermaid(text: string): MermaidImportResult {
   };
 
   const result = candidateToGraph(candidate);
-  // Carry subgraph membership onto the AIR nodes (group_id survives export).
-  const groupOf = new Map([...nodes.values()].map((n) => [n.id, n.group]));
+  // Carry subgraph membership onto the AIR nodes. candidateToGraph re-slugs
+  // ids (lowercase, punctuation → _), so key the lookup by the same slug.
+  const groupOf = new Map<string, string | null>();
+  for (const n of nodes.values()) {
+    groupOf.set(n.id, n.group);
+    groupOf.set(slug(n.id), n.group);
+  }
   for (const node of result.graph.nodes) {
     const g = groupOf.get(node.id);
     if (g) node.group_id = g;
@@ -234,7 +284,8 @@ const MERMAID_SHAPE_FOR_CATEGORY: Record<string, [string, string]> = {
   security: ["{{", "}}"],
 };
 
-const escapeLabel = (label: string): string => `"${label.replace(/"/g, "'")}"`;
+const escapeLabel = (label: string): string =>
+  `"${label.replace(/"/g, "'").replace(/\|/g, "/").replace(/-{2,}/g, "–")}"`;
 
 /** Deterministic export: no timestamps, stable ordering from the graph itself. */
 export function exportMermaid(graph: AirGraph, name?: string): string {

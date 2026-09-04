@@ -12,10 +12,15 @@ export type AutosaveState = "idle" | "pending" | "saved" | "error";
 
 export interface AutosaveSnapshot {
   projectId: string | null;
+  /** Draft slot when projectId is null ('unsaved' work vs a 'shared' session). */
+  draftSlot: string | null;
   name: string;
   sourceType: SourceType;
   baseGraphVersion: number;
   graph: AirGraph;
+  /** Hash/name of the last saved version, so an undo back to it clears the draft. */
+  savedHash: string | null;
+  savedName: string | null;
 }
 
 const DEBOUNCE_MS = 800;
@@ -48,12 +53,32 @@ export function flushAutosave() {
     timer = null;
   }
   const snap = pendingSnapshot?.();
-  if (!snap) return;
+  if (!snap) {
+    onState?.("idle", null);
+    return;
+  }
+  const slot = snap.projectId ?? snap.draftSlot;
   const hash = graphHash(snap.graph);
-  if (hash === lastWrittenHash && snap.name === lastWrittenName) return;
+  // Back at the saved state (e.g. via undo): the draft is redundant — clear it
+  // so the projects page never shows a phantom "unsaved changes" badge.
+  if (snap.savedHash && hash === snap.savedHash && snap.name === (snap.savedName ?? snap.name)) {
+    try {
+      clearDraft(slot);
+    } catch {
+      /* removing a draft can't hit quota */
+    }
+    lastWrittenHash = hash;
+    lastWrittenName = snap.name;
+    onState?.("idle", null);
+    return;
+  }
+  if (hash === lastWrittenHash && snap.name === lastWrittenName) {
+    onState?.("saved", null);
+    return;
+  }
   try {
     saveDraft({
-      project_id: snap.projectId,
+      project_id: slot,
       name: snap.name,
       source_type: snap.sourceType,
       base_graph_version: snap.baseGraphVersion,

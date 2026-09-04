@@ -89,6 +89,8 @@ async function withRuntimeRetry<T>(run: () => Promise<T>): Promise<T> {
   }
 }
 const pending = new Map<number, { resolve: (t: string) => void; reject: (e: Error) => void }>();
+/** The request whose streamed tokens the UI is showing. */
+let activeGenerateId: number | null = null;
 const loadWaiters = new Map<string, { resolve: () => void; reject: (e: Error) => void }[]>();
 
 function ensureWorker(): Worker {
@@ -102,7 +104,14 @@ function ensureWorker(): Worker {
     switch (m.type) {
       case "progress": {
         const key = `${m.kind}:${m.modelId}:${m.file ?? "?"}`;
-        const files = { ...state.files, [key]: m as ModelProgress };
+        const prev = state.files[key];
+        // A 'done' event carries no byte counts; keep the file at 100% instead
+        // of dropping it out of the byte-weighted total (progress regression).
+        const entry =
+          (m as { status?: string }).status === "done" && prev
+            ? { ...prev, progress: 100, loaded: prev.total ?? prev.loaded }
+            : (m as ModelProgress);
+        const files = { ...state.files, [key]: entry };
         const values = Object.values(files).filter((f) => f.progress !== null);
         // Byte-weighted where sizes are known, so a 200 MB decoder at 10% does
         // not read as "55% done" because tokenizer.json finished.
@@ -140,6 +149,7 @@ function ensureWorker(): Worker {
         break;
       }
       case "token":
+        if (m.id !== activeGenerateId) break; // stragglers from a cancelled run
         emit({ partial: state.partial + m.text });
         break;
       case "result": {
@@ -227,20 +237,27 @@ export function generateLocal(opts: {
       partial: "",
       error: null,
     });
+    if (opts.signal?.aborted)
+      return Promise.reject(new DOMException("Generation cancelled.", "AbortError"));
+    activeGenerateId = id;
     return new Promise<string>((resolve, reject) => {
-      pending.set(id, { resolve, reject });
-      if (opts.signal) {
-        opts.signal.addEventListener(
-          "abort",
-          () => {
-            worker?.postMessage({ type: "cancel" });
-            pending.delete(id);
-            emit({ status: "ready", partial: "" });
-            reject(new DOMException("Generation cancelled.", "AbortError"));
-          },
-          { once: true },
-        );
-      }
+      const onAbort = () => {
+        worker?.postMessage({ type: "cancel" });
+        pending.delete(id);
+        if (activeGenerateId === id) activeGenerateId = null;
+        emit({ status: "ready", partial: "" });
+        reject(new DOMException("Generation cancelled.", "AbortError"));
+      };
+      opts.signal?.addEventListener("abort", onAbort, { once: true });
+      const settle = (fn: (v: never) => void) => (v: never) => {
+        opts.signal?.removeEventListener("abort", onAbort);
+        if (activeGenerateId === id) activeGenerateId = null;
+        fn(v);
+      };
+      pending.set(id, {
+        resolve: settle(resolve) as unknown as (t: string) => void,
+        reject: settle(reject) as unknown as (e: Error) => void,
+      });
       w.postMessage({
         type: "generate",
         id,

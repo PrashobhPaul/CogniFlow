@@ -23,8 +23,13 @@ import { Palette } from "./Palette";
 import { Inspector } from "./Inspector";
 import { Toolbar } from "./Toolbar";
 import { useStudio } from "@/lib/studio/store";
-import { armAutosaveLifecycle, flushAutosave, recoverableDraft } from "@/lib/studio/autosave";
-import { clearDraft, getProject } from "@/lib/studio/projects";
+import {
+  armAutosaveLifecycle,
+  discardAutosave,
+  flushAutosave,
+  recoverableDraft,
+} from "@/lib/studio/autosave";
+import { getProject, SHARED_DRAFT_ID } from "@/lib/studio/projects";
 import type { PaletteItem } from "@/lib/studio/palette";
 import { PALETTE } from "@/lib/studio/palette";
 import { Route } from "@/routes/studio";
@@ -67,11 +72,14 @@ function Canvas() {
   const { nodes, edges, onNodesChange, onEdgesChange, onConnect, addNode, select } = useStudio();
   const { project, d } = Route.useSearch();
   const [prefs, setPrefs] = useState(DEFAULT_PREFS);
-  const menuTarget = useRef<MenuTarget>({ kind: "pane", x: 0, y: 0 });
+  const [menuTarget, setMenuTarget] = useState<MenuTarget>({ kind: "pane", x: 0, y: 0 });
 
   useEffect(() => {
     setPrefs(loadPrefs());
     armAutosaveLifecycle();
+    // The previous project's debounced edits must land in ITS draft before this
+    // effect replaces the canvas, or an in-flight burst is silently lost.
+    flushAutosave();
     const store = useStudio.getState();
 
     // Shared graph in the URL wins over everything else.
@@ -85,6 +93,7 @@ function Canvas() {
             name: shared.title ?? "Shared architecture",
             sourceType: "blank",
             dirty: true,
+            draftSlot: SHARED_DRAFT_ID, // never clobber the user's unsaved-work draft
           });
           toast.info("Opened a shared architecture. Save it to keep a copy in this browser.");
         } else {
@@ -120,7 +129,7 @@ function Canvas() {
             action: {
               label: "Discard",
               onClick: () => {
-                clearDraft(project);
+                discardAutosave(project);
                 useStudio.getState().openProject(project);
               },
             },
@@ -141,7 +150,7 @@ function Canvas() {
           action: {
             label: "Discard",
             onClick: () => {
-              clearDraft(null);
+              discardAutosave(null);
               useStudio.getState().loadGraph(DEFAULT_GRAPH, {
                 projectId: null,
                 name: "Reference architecture",
@@ -178,6 +187,9 @@ function Canvas() {
         return;
       }
       if (!mod) return;
+      // A live text selection on the page keeps its native clipboard behaviour.
+      const textSelection = !(window.getSelection()?.isCollapsed ?? true);
+      if (textSelection && (key === "c" || key === "x" || key === "a")) return;
       switch (key) {
         case "z":
           e.preventDefault();
@@ -240,6 +252,19 @@ function Canvas() {
     [addNode, screenToFlowPosition],
   );
 
+  const onBeforeDelete = useCallback(
+    async ({ nodes: delNodes, edges: delEdges }: { nodes: Node[]; edges: Edge[] }) => {
+      // Route React Flow's Delete/Backspace through one store action so a
+      // node + its connectors are a single undo step.
+      useStudio.getState().deleteElements(
+        delNodes.map((n) => n.id),
+        delEdges.map((e) => e.id),
+      );
+      return false; // we already applied it
+    },
+    [],
+  );
+
   const onReconnect = useCallback((oldEdge: Edge, connection: Connection) => {
     const store = useStudio.getState();
     // reconnectEdge keeps the edge id and data; the store commits the change.
@@ -293,20 +318,21 @@ function Canvas() {
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
             onReconnect={onReconnect}
+            onBeforeDelete={onBeforeDelete}
             onNodeClick={(_, n) => select(n.id, null)}
             onEdgeClick={(_, e) => select(null, e.id)}
             onPaneClick={() => select(null, null)}
             onNodeContextMenu={(_, n: Node) => {
-              menuTarget.current = { kind: "node", id: n.id };
+              setMenuTarget({ kind: "node", id: n.id });
               select(n.id, null);
             }}
             onEdgeContextMenu={(_, e: Edge) => {
-              menuTarget.current = { kind: "edge", id: e.id };
+              setMenuTarget({ kind: "edge", id: e.id });
               select(null, e.id);
             }}
             onPaneContextMenu={(e) => {
               const ev = e as React.MouseEvent;
-              menuTarget.current = { kind: "pane", x: ev.clientX, y: ev.clientY };
+              setMenuTarget({ kind: "pane", x: ev.clientX, y: ev.clientY });
             }}
             onDrop={onDrop}
             onDragOver={(e) => {
@@ -337,7 +363,7 @@ function Canvas() {
         </div>
       </ContextMenuTrigger>
       <ContextMenuContent className="w-56">
-        {menuTarget.current.kind !== "pane" ? (
+        {menuTarget.kind !== "pane" ? (
           <>
             <ContextMenuItem onClick={menuAction(() => useStudio.getState().duplicateSelection())}>
               Duplicate <ContextMenuShortcut>⌘D</ContextMenuShortcut>
@@ -362,23 +388,20 @@ function Canvas() {
                   <ContextMenuSub key={cat}>
                     <ContextMenuSubTrigger>{CATEGORY_LABEL[cat]}</ContextMenuSubTrigger>
                     <ContextMenuSubContent className="max-h-80 w-56 overflow-y-auto">
-                      {PALETTE.filter((p) => p.category === cat).map((item) => {
-                        const t = menuTarget.current;
-                        return (
-                          <ContextMenuItem
-                            key={item.type}
-                            onClick={() =>
-                              insertAt(
-                                item,
-                                t.kind === "pane" ? t.x : 0,
-                                t.kind === "pane" ? t.y : 0,
-                              )
-                            }
-                          >
-                            {item.label}
-                          </ContextMenuItem>
-                        );
-                      })}
+                      {PALETTE.filter((p) => p.category === cat).map((item) => (
+                        <ContextMenuItem
+                          key={item.type}
+                          onClick={() =>
+                            insertAt(
+                              item,
+                              menuTarget.kind === "pane" ? menuTarget.x : 0,
+                              menuTarget.kind === "pane" ? menuTarget.y : 0,
+                            )
+                          }
+                        >
+                          {item.label}
+                        </ContextMenuItem>
+                      ))}
                     </ContextMenuSubContent>
                   </ContextMenuSub>
                 ))}
