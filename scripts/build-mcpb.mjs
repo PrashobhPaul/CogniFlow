@@ -17,10 +17,10 @@ rmSync(out, { recursive: true, force: true });
 mkdirSync(resolve(stage, "server"), { recursive: true });
 
 // Bundle the stdio server (and every dependency) into one Node-runnable file.
-execSync(
-  `bun build mcp/server.ts --target=node --outfile=${resolve(stage, "server/index.js")}`,
-  { cwd: root, stdio: "inherit" },
-);
+execSync(`bun build mcp/server.ts --target=node --outfile=${resolve(stage, "server/index.js")}`, {
+  cwd: root,
+  stdio: "inherit",
+});
 
 cpSync(resolve(root, "public/brand/icon-512.png"), resolve(stage, "icon.png"));
 
